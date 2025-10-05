@@ -230,29 +230,217 @@ export const mockEmails: Email[] = [
 
 export const mockFunnels: Funnel[] = [
   {
-    id: 'funnel-1',
+    id: '1',
     competitorId: 'comp-1',
-    name: 'Onboarding Principal',
-    emailIds: ['email-1', 'email-2', 'email-3'],
-    cadenceSummary: {
-      avgGap: 36,
-      min: 24,
-      max: 72
-    },
-    startDate: '2024-03-01T10:00:00Z',
-    endDate: '2024-03-05T09:00:00Z'
+    name: 'Onboarding Premium',
+    emailIds: ['e1', 'e2', 'e3', 'e4', 'e5'],
+    cadenceSummary: { avgGap: 48, min: 24, max: 72 },
+    startDate: '2024-01-15',
+    endDate: '2024-02-01',
+    lastEmailAt: '2024-02-01T14:30:00',
+    emails: [
+      {
+        id: 'e1',
+        subject: 'Bem-vindo ao TechCorp! Comece aqui 🚀',
+        category: 'onboarding',
+        cta: 'Completar perfil',
+        sentAt: '2024-01-15T09:00:00',
+        dayOffset: 0
+      },
+      {
+        id: 'e2',
+        subject: 'Descubra os principais recursos',
+        category: 'educacao',
+        cta: 'Ver tutorial',
+        sentAt: '2024-01-17T10:00:00',
+        dayOffset: 2
+      },
+      {
+        id: 'e3',
+        subject: 'Dica: Como maximizar seus resultados',
+        category: 'educacao',
+        cta: 'Acessar guia',
+        sentAt: '2024-01-20T15:00:00',
+        dayOffset: 5
+      },
+      {
+        id: 'e4',
+        subject: 'Última chance: Upgrade com 50% OFF',
+        category: 'promo',
+        cta: 'Fazer upgrade',
+        sentAt: '2024-01-25T11:00:00',
+        dayOffset: 10
+      },
+      {
+        id: 'e5',
+        subject: 'Você está aproveitando tudo?',
+        category: 'reengajamento',
+        cta: 'Explorar recursos',
+        sentAt: '2024-02-01T14:30:00',
+        dayOffset: 17
+      }
+    ],
+    insights: [
+      'Funil focado em educação com conversão para upgrade',
+      'Gap maior entre D+10 e D+17 pode indicar período de teste',
+      'CTA mais agressivo no D+10 (desconto limitado)',
+      'Tom de comunicação evolui de acolhedor para comercial'
+    ]
   },
   {
-    id: 'funnel-2',
+    id: '2',
     competitorId: 'comp-2',
-    name: 'Série Educacional',
-    emailIds: ['email-4', 'email-5'],
-    cadenceSummary: {
-      avgGap: 48,
-      min: 48,
-      max: 48
-    },
-    startDate: '2024-02-15T08:00:00Z'
+    name: 'Sequência Black Friday',
+    emailIds: ['e6', 'e7', 'e8'],
+    cadenceSummary: { avgGap: 24, min: 12, max: 36 },
+    startDate: '2024-11-20',
+    lastEmailAt: '2024-11-25T20:00:00',
+    emails: [
+      {
+        id: 'e6',
+        subject: '🔥 Black Friday chegou! Até 70% OFF',
+        category: 'sazonal',
+        cta: 'Ver ofertas',
+        sentAt: '2024-11-20T08:00:00',
+        dayOffset: 0
+      },
+      {
+        id: 'e7',
+        subject: 'Última chamada: Ofertas acabam em 24h ⏰',
+        category: 'promo',
+        cta: 'Aproveitar agora',
+        sentAt: '2024-11-24T10:00:00',
+        dayOffset: 4
+      },
+      {
+        id: 'e8',
+        subject: 'URGENTE: Últimas horas da Black Friday',
+        category: 'promo',
+        cta: 'Comprar antes que acabe',
+        sentAt: '2024-11-25T20:00:00',
+        dayOffset: 5
+      }
+    ],
+    insights: [
+      'Cadência agressiva típica de campanha sazonal',
+      'Uso intenso de urgência e escassez',
+      'Descontos progressivos para criar FOMO',
+      'Foco total em conversão rápida'
+    ]
+  },
+  {
+    id: '3',
+    competitorId: 'comp-1',
+    name: 'Reativação de Inativos',
+    emailIds: ['e9', 'e10', 'e11', 'e12'],
+    cadenceSummary: { avgGap: 120, min: 72, max: 168 },
+    startDate: '2024-03-01',
+    lastEmailAt: '2024-03-25T16:00:00',
+    emails: [
+      {
+        id: 'e9',
+        subject: 'Sentimos sua falta! Aqui está um presente',
+        category: 'reengajamento',
+        cta: 'Voltar agora',
+        sentAt: '2024-03-01T10:00:00',
+        dayOffset: 0
+      },
+      {
+        id: 'e10',
+        subject: 'Novidades que você perdeu',
+        category: 'educacao',
+        cta: 'Ver novidades',
+        sentAt: '2024-03-08T14:00:00',
+        dayOffset: 7
+      },
+      {
+        id: 'e11',
+        subject: 'Oferta exclusiva para você voltar',
+        category: 'promo',
+        cta: 'Reativar conta',
+        sentAt: '2024-03-18T11:00:00',
+        dayOffset: 17
+      },
+      {
+        id: 'e12',
+        subject: 'Última tentativa: Queremos você de volta',
+        category: 'reengajamento',
+        cta: 'Dar uma chance',
+        sentAt: '2024-03-25T16:00:00',
+        dayOffset: 24
+      }
+    ],
+    insights: [
+      'Gaps longos respeitam tempo de decisão do usuário',
+      'Estratégia de "dar espaço" antes de insistir',
+      'Combinação de nostalgia, novidade e incentivo financeiro',
+      'Tom empático e não invasivo'
+    ]
+  },
+  {
+    id: '4',
+    competitorId: 'comp-1',
+    name: 'Educação Contínua',
+    emailIds: ['e13', 'e14', 'e15', 'e16', 'e17', 'e18'],
+    cadenceSummary: { avgGap: 168, min: 168, max: 168 },
+    startDate: '2024-01-01',
+    lastEmailAt: '2024-02-19T09:00:00',
+    emails: [
+      {
+        id: 'e13',
+        subject: 'Dica da semana: Automação de tarefas',
+        category: 'educacao',
+        cta: 'Ler artigo',
+        sentAt: '2024-01-01T09:00:00',
+        dayOffset: 0
+      },
+      {
+        id: 'e14',
+        subject: 'Caso de sucesso: Como a Empresa X cresceu 200%',
+        category: 'educacao',
+        cta: 'Ver caso',
+        sentAt: '2024-01-08T09:00:00',
+        dayOffset: 7
+      },
+      {
+        id: 'e15',
+        subject: 'Webinar gratuito: Melhores práticas',
+        category: 'educacao',
+        cta: 'Inscrever-se',
+        sentAt: '2024-01-15T09:00:00',
+        dayOffset: 14
+      },
+      {
+        id: 'e16',
+        subject: 'Checklist: Otimize seu workflow',
+        category: 'educacao',
+        cta: 'Baixar checklist',
+        sentAt: '2024-01-22T09:00:00',
+        dayOffset: 21
+      },
+      {
+        id: 'e17',
+        subject: 'Novos recursos que você precisa conhecer',
+        category: 'educacao',
+        cta: 'Explorar',
+        sentAt: '2024-01-29T09:00:00',
+        dayOffset: 28
+      },
+      {
+        id: 'e18',
+        subject: 'Resumo do mês: Suas conquistas',
+        category: 'educacao',
+        cta: 'Ver relatório',
+        sentAt: '2024-02-19T09:00:00',
+        dayOffset: 49
+      }
+    ],
+    insights: [
+      'Cadência semanal consistente (todo segunda às 9h)',
+      'Foco em agregar valor sem vender diretamente',
+      'Construção de autoridade e engajamento de longo prazo',
+      'Mix de formatos: artigos, casos, webinars, checklists'
+    ]
   }
 ];
 

@@ -90,7 +90,7 @@ export default function Competitors() {
 
   const { data: funnelsData } = useQuery({
     queryKey: ['funnels', selectedCompetitor?.id],
-    queryFn: () => selectedCompetitor ? funnelService.list(selectedCompetitor.id) : Promise.resolve([]),
+    queryFn: () => selectedCompetitor ? funnelService.list({ competitorId: selectedCompetitor.id }) : Promise.resolve([]),
     enabled: !!selectedCompetitor
   });
 
@@ -113,7 +113,7 @@ export default function Competitors() {
     mutationFn: async () => {
       // Mock CSV export
       const csv = 'Nome,Domínio,Status,E-mails 30d,Funis Ativos\n' +
-        (competitorsData?.data || []).map(c => 
+        (competitorsData || []).map(c => 
           `${c.name},${c.mainDomain},${statusLabels[c.status]},${c.emailsLast30d},${c.activeFunnels}`
         ).join('\n');
       return csv;
@@ -133,9 +133,9 @@ export default function Competitors() {
   });
 
   const filteredCompetitors = useMemo(() => {
-    if (!competitorsData?.data) return [];
+    if (!competitorsData) return [];
     
-    let filtered = [...competitorsData.data];
+    let filtered = [...competitorsData];
     
     if (statusFilter !== 'todos') {
       filtered = filtered.filter(c => c.status === statusFilter);
@@ -146,7 +146,7 @@ export default function Competitors() {
     }
     
     return filtered;
-  }, [competitorsData?.data, statusFilter, showNewActivity]);
+  }, [competitorsData, statusFilter, showNewActivity]);
 
   const topCompetitors = useMemo(() => {
     return [...filteredCompetitors]

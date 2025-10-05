@@ -29,7 +29,7 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 // Competitors
 export const competitorService = {
-  async list(params?: FilterParams): Promise<PaginatedResponse<Competitor>> {
+  async list(params?: FilterParams): Promise<Competitor[]> {
     await delay(300);
     const filtered = params?.search
       ? mockCompetitors.filter(c => 
@@ -37,12 +37,7 @@ export const competitorService = {
         )
       : mockCompetitors;
     
-    return {
-      data: filtered,
-      total: filtered.length,
-      page: params?.page || 1,
-      pageSize: params?.pageSize || 10
-    };
+    return filtered;
   },
 
   async getById(id: string): Promise<Competitor | null> {
@@ -181,16 +176,36 @@ export const emailService = {
 
 // Funnels
 export const funnelService = {
-  async list(competitorId?: string): Promise<Funnel[]> {
+  async list(filters?: { competitorId?: string; category?: string; period?: string }): Promise<Funnel[]> {
     await delay(200);
-    return competitorId
-      ? mockFunnels.filter(f => f.competitorId === competitorId)
-      : mockFunnels;
+    let filtered = [...mockFunnels];
+    
+    if (filters?.competitorId && filters.competitorId !== 'all') {
+      filtered = filtered.filter(f => f.competitorId === filters.competitorId);
+    }
+    
+    if (filters?.category && filters.category !== 'all') {
+      filtered = filtered.filter(f => 
+        f.emails.some(e => e.category === filters.category)
+      );
+    }
+    
+    return filtered;
   },
 
   async getById(id: string): Promise<Funnel | null> {
     await delay(200);
     return mockFunnels.find(f => f.id === id) || null;
+  },
+  
+  async compare(ids: string[]): Promise<Funnel[]> {
+    await delay(200);
+    return mockFunnels.filter(f => ids.includes(f.id));
+  },
+  
+  async exportCSV(filters?: any): Promise<void> {
+    await delay(300);
+    console.log('Exporting funnels to CSV...', filters);
   }
 };
 

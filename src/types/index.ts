@@ -81,6 +81,15 @@ export interface Email {
   dayOffset?: number; // D+0, D+1, etc
 }
 
+export interface FunnelEmail {
+  id: string;
+  subject: string;
+  category: EmailCategory;
+  cta?: string;
+  sentAt: string;
+  dayOffset: number; // D+0, D+1, etc
+}
+
 export interface Funnel {
   id: string;
   competitorId: string;
@@ -93,6 +102,9 @@ export interface Funnel {
   };
   startDate: string;
   endDate?: string;
+  lastEmailAt: string;
+  emails: FunnelEmail[];
+  insights: string[];
 }
 
 export type AlertType = 'new_email' | 'new_funnel' | 'competitor_paused' | 'ab_test_detected';
