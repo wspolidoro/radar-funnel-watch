@@ -27,6 +27,11 @@ export interface Competitor {
   activeFunnels: number;
   createdAt: string;
   updatedAt: string;
+  lastEmailAt?: string;
+  avgIntervalHours?: number;
+  hasNewActivity?: boolean;
+  sparklineData?: number[];
+  insights?: string[];
 }
 
 export type SeedProvider = 'mailgun' | 'sendgrid' | 'gmail' | 'outlook';

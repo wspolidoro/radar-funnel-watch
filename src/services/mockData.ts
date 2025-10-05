@@ -37,7 +37,17 @@ export const mockCompetitors: Competitor[] = [
     emailsLast30d: 47,
     activeFunnels: 3,
     createdAt: '2024-01-15T10:00:00Z',
-    updatedAt: '2024-03-01T14:30:00Z'
+    updatedAt: '2024-03-01T14:30:00Z',
+    lastEmailAt: '2024-03-05T09:00:00Z',
+    avgIntervalHours: 36,
+    hasNewActivity: true,
+    sparklineData: [2, 3, 1, 4, 2, 5, 3, 2, 4, 3, 5, 4, 3, 2, 4, 5, 3, 2, 4, 3, 2, 5, 4, 3, 2, 4, 3, 5, 4, 2],
+    insights: [
+      'Este concorrente utiliza uma estratégia de onboarding com 5 emails espaçados em 48h',
+      'Emails promocionais são enviados principalmente às quartas-feiras',
+      'A taxa média de CTAs por email é 2.3, focando em ações primárias claras',
+      'Aumentou cadência de envios em 30% nos últimos 7 dias'
+    ]
   },
   {
     id: 'comp-2',
@@ -48,7 +58,16 @@ export const mockCompetitors: Competitor[] = [
     emailsLast30d: 32,
     activeFunnels: 2,
     createdAt: '2024-02-01T09:00:00Z',
-    updatedAt: '2024-03-02T11:15:00Z'
+    updatedAt: '2024-03-02T11:15:00Z',
+    lastEmailAt: '2024-03-04T14:20:00Z',
+    avgIntervalHours: 48,
+    hasNewActivity: false,
+    sparklineData: [1, 2, 1, 1, 2, 1, 2, 1, 1, 2, 1, 2, 1, 1, 2, 1, 2, 1, 1, 2, 1, 2, 1, 1, 2, 1, 2, 1, 1, 2],
+    insights: [
+      'Foco em conteúdo educacional com sequências longas',
+      'Tom de voz profissional e técnico',
+      'Baixa frequência de promoções (apenas 2 nos últimos 30 dias)'
+    ]
   },
   {
     id: 'comp-3',
@@ -59,7 +78,56 @@ export const mockCompetitors: Competitor[] = [
     emailsLast30d: 0,
     activeFunnels: 0,
     createdAt: '2024-01-20T15:00:00Z',
-    updatedAt: '2024-02-28T16:45:00Z'
+    updatedAt: '2024-02-28T16:45:00Z',
+    lastEmailAt: '2024-02-28T10:00:00Z',
+    avgIntervalHours: 0,
+    hasNewActivity: false,
+    sparklineData: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    insights: [
+      'Monitoramento pausado manualmente',
+      'Última atividade registrada há mais de 7 dias'
+    ]
+  },
+  {
+    id: 'comp-4',
+    name: 'Concorrente D',
+    website: 'https://concorrented.com',
+    mainDomain: 'concorrented.com',
+    status: 'active',
+    emailsLast30d: 68,
+    activeFunnels: 5,
+    createdAt: '2024-01-05T08:00:00Z',
+    updatedAt: '2024-03-05T16:00:00Z',
+    lastEmailAt: '2024-03-05T16:00:00Z',
+    avgIntervalHours: 24,
+    hasNewActivity: true,
+    sparklineData: [3, 4, 2, 3, 5, 4, 3, 2, 4, 5, 3, 4, 2, 3, 5, 4, 3, 2, 4, 5, 3, 4, 2, 3, 5, 4, 3, 2, 4, 5],
+    insights: [
+      'Alto volume de disparos com cadência consistente de 24h',
+      'Utiliza testes A/B em 40% dos emails',
+      'Foco em promoções e ofertas limitadas',
+      'Maior volume de envios entre 9h-11h'
+    ]
+  },
+  {
+    id: 'comp-5',
+    name: 'Concorrente E',
+    website: 'https://concorrentee.com',
+    mainDomain: 'concorrentee.com',
+    status: 'active',
+    emailsLast30d: 15,
+    activeFunnels: 1,
+    createdAt: '2024-02-20T12:00:00Z',
+    updatedAt: '2024-03-03T09:30:00Z',
+    lastEmailAt: '2024-03-03T09:30:00Z',
+    avgIntervalHours: 72,
+    hasNewActivity: false,
+    sparklineData: [0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1],
+    insights: [
+      'Estratégia conservadora com baixo volume',
+      'Emails altamente segmentados e personalizados',
+      'Foco em relacionamento de longo prazo'
+    ]
   }
 ];
 
