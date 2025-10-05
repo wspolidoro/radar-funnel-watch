@@ -112,6 +112,31 @@ export interface Report {
   createdAt: string;
 }
 
+export type ClientStatus = 'ativo' | 'teste' | 'inativo';
+export type ClientPlan = 'basic' | 'pro' | 'enterprise';
+
+export interface Client {
+  id: string;
+  nome: string;
+  dominio: string;
+  responsavel: string;
+  email: string;
+  telefone?: string;
+  plano: ClientPlan;
+  status: ClientStatus;
+  criadoEm: string;
+  uso: {
+    concorrentes: number;
+    emails: number;
+    relatorios: number;
+  };
+  historicoPagamentos: {
+    data: string;
+    valor: string;
+    status: string;
+  }[];
+}
+
 export interface DashboardKPIs {
   competitorsMonitored: number;
   newEmailsLast7d: number;

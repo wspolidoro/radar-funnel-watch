@@ -4,7 +4,8 @@ import {
   Library, 
   GitBranch, 
   FileText, 
-  Settings 
+  Settings,
+  Building2
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import {
@@ -25,6 +26,7 @@ const menuItems = [
   { title: 'Biblioteca', url: '/library', icon: Library },
   { title: 'Funis', url: '/funnels', icon: GitBranch },
   { title: 'Relatórios', url: '/reports', icon: FileText },
+  { title: 'Clientes', url: '/clients', icon: Building2 },
   { title: 'Configurações', url: '/settings', icon: Settings },
 ];
 

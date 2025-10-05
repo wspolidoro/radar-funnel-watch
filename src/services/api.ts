@@ -9,7 +9,8 @@ import type {
   Report,
   DashboardKPIs,
   PaginatedResponse,
-  FilterParams
+  FilterParams,
+  Client
 } from '@/types';
 
 import {
@@ -20,7 +21,8 @@ import {
   mockFunnels,
   mockAlerts,
   mockReports,
-  mockDashboardKPIs
+  mockDashboardKPIs,
+  mockClients
 } from './mockData';
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -272,5 +274,99 @@ export const aiService = {
       'Emails promocionais são enviados principalmente às quartas-feiras',
       'O tom de voz é casual e amigável, com uso moderado de emojis'
     ];
+  }
+};
+
+// Clients
+export const clientService = {
+  async list(params?: FilterParams & {
+    status?: string;
+    plano?: string;
+  }): Promise<PaginatedResponse<Client>> {
+    await delay(300);
+    
+    let filtered = [...mockClients];
+    
+    if (params?.search) {
+      filtered = filtered.filter(c =>
+        c.nome.toLowerCase().includes(params.search!.toLowerCase()) ||
+        c.email.toLowerCase().includes(params.search!.toLowerCase()) ||
+        c.responsavel.toLowerCase().includes(params.search!.toLowerCase())
+      );
+    }
+    
+    if (params?.status && params.status !== 'todos') {
+      filtered = filtered.filter(c => c.status === params.status);
+    }
+    
+    if (params?.plano && params.plano !== 'todos') {
+      filtered = filtered.filter(c => c.plano === params.plano);
+    }
+    
+    const page = params?.page || 1;
+    const pageSize = params?.pageSize || 10;
+    const start = (page - 1) * pageSize;
+    const end = start + pageSize;
+    
+    return {
+      data: filtered.slice(start, end),
+      total: filtered.length,
+      page,
+      pageSize
+    };
+  },
+
+  async getById(id: string): Promise<Client | null> {
+    await delay(200);
+    return mockClients.find(c => c.id === id) || null;
+  },
+
+  async create(data: Partial<Client>): Promise<Client> {
+    await delay(400);
+    const newClient: Client = {
+      id: `client-${Date.now()}`,
+      nome: data.nome || '',
+      dominio: data.dominio || '',
+      responsavel: data.responsavel || '',
+      email: data.email || '',
+      telefone: data.telefone,
+      plano: data.plano || 'basic',
+      status: data.status || 'teste',
+      criadoEm: new Date().toISOString(),
+      uso: {
+        concorrentes: 0,
+        emails: 0,
+        relatorios: 0
+      },
+      historicoPagamentos: []
+    };
+    mockClients.push(newClient);
+    return newClient;
+  },
+
+  async update(id: string, data: Partial<Client>): Promise<Client> {
+    await delay(300);
+    const index = mockClients.findIndex(c => c.id === id);
+    if (index === -1) throw new Error('Cliente não encontrado');
+    mockClients[index] = { ...mockClients[index], ...data };
+    return mockClients[index];
+  },
+
+  async suspend(id: string): Promise<Client> {
+    await delay(300);
+    const index = mockClients.findIndex(c => c.id === id);
+    if (index === -1) throw new Error('Cliente não encontrado');
+    mockClients[index].status = 'inativo';
+    return mockClients[index];
+  },
+
+  async exportCSV(): Promise<string> {
+    await delay(500);
+    // Mock CSV generation
+    const headers = 'Nome,Domínio,Responsável,Email,Plano,Status,Criado em\n';
+    const rows = mockClients.map(c =>
+      `${c.nome},${c.dominio},${c.responsavel},${c.email},${c.plano},${c.status},${c.criadoEm}`
+    ).join('\n');
+    return headers + rows;
   }
 };

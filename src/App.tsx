@@ -11,6 +11,7 @@ import Library from "./pages/Library";
 import Funnels from "./pages/Funnels";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
+import Clients from "./pages/Clients";
 import Onboarding from "./pages/Onboarding";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
@@ -46,6 +47,7 @@ const App = () => (
               <Route path="/library" element={<Library />} />
               <Route path="/funnels" element={<Funnels />} />
               <Route path="/reports" element={<Reports />} />
+              <Route path="/clients" element={<Clients />} />
               <Route path="/settings" element={<Settings />} />
             </Route>
             <Route path="*" element={<NotFound />} />

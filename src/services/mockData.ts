@@ -8,7 +8,8 @@ import type {
   Funnel,
   Alert,
   Report,
-  DashboardKPIs
+  DashboardKPIs,
+  Client
 } from '@/types';
 
 export const mockUser: User = {
@@ -231,3 +232,105 @@ export const mockDashboardKPIs: DashboardKPIs = {
   funnelsDetected: 5,
   avgIntervalHours: 42
 };
+
+export const mockClients: Client[] = [
+  {
+    id: 'client-1',
+    nome: 'Tech Solutions Ltda',
+    dominio: 'techsolutions.com.br',
+    responsavel: 'Maria Santos',
+    email: 'maria@techsolutions.com.br',
+    telefone: '(11) 98765-4321',
+    plano: 'pro',
+    status: 'ativo',
+    criadoEm: '2024-01-10T10:00:00Z',
+    uso: {
+      concorrentes: 5,
+      emails: 230,
+      relatorios: 8
+    },
+    historicoPagamentos: [
+      { data: '2024-03-01', valor: 'R$ 299,00', status: 'Pago' },
+      { data: '2024-02-01', valor: 'R$ 299,00', status: 'Pago' },
+      { data: '2024-01-10', valor: 'R$ 299,00', status: 'Pago' }
+    ]
+  },
+  {
+    id: 'client-2',
+    nome: 'Startup Innovare',
+    dominio: 'innovare.io',
+    responsavel: 'Carlos Mendes',
+    email: 'carlos@innovare.io',
+    telefone: '(21) 99876-5432',
+    plano: 'basic',
+    status: 'ativo',
+    criadoEm: '2024-02-15T14:30:00Z',
+    uso: {
+      concorrentes: 2,
+      emails: 85,
+      relatorios: 3
+    },
+    historicoPagamentos: [
+      { data: '2024-03-15', valor: 'R$ 99,00', status: 'Pago' },
+      { data: '2024-02-15', valor: 'R$ 99,00', status: 'Pago' }
+    ]
+  },
+  {
+    id: 'client-3',
+    nome: 'E-commerce Plus',
+    dominio: 'ecommerceplus.com',
+    responsavel: 'Ana Lima',
+    email: 'ana@ecommerceplus.com',
+    telefone: '(31) 97654-3210',
+    plano: 'enterprise',
+    status: 'ativo',
+    criadoEm: '2023-11-20T09:00:00Z',
+    uso: {
+      concorrentes: 15,
+      emails: 1250,
+      relatorios: 24
+    },
+    historicoPagamentos: [
+      { data: '2024-03-20', valor: 'R$ 999,00', status: 'Pago' },
+      { data: '2024-02-20', valor: 'R$ 999,00', status: 'Pago' },
+      { data: '2024-01-20', valor: 'R$ 999,00', status: 'Pago' }
+    ]
+  },
+  {
+    id: 'client-4',
+    nome: 'Marketing Agency XYZ',
+    dominio: 'agencyxyz.com.br',
+    responsavel: 'Pedro Costa',
+    email: 'pedro@agencyxyz.com.br',
+    plano: 'pro',
+    status: 'teste',
+    criadoEm: '2024-03-01T11:00:00Z',
+    uso: {
+      concorrentes: 3,
+      emails: 45,
+      relatorios: 1
+    },
+    historicoPagamentos: []
+  },
+  {
+    id: 'client-5',
+    nome: 'Global Corp International',
+    dominio: 'globalcorp.com',
+    responsavel: 'Roberto Silva',
+    email: 'roberto@globalcorp.com',
+    telefone: '(47) 98123-4567',
+    plano: 'enterprise',
+    status: 'inativo',
+    criadoEm: '2023-08-10T08:00:00Z',
+    uso: {
+      concorrentes: 8,
+      emails: 650,
+      relatorios: 15
+    },
+    historicoPagamentos: [
+      { data: '2024-01-10', valor: 'R$ 999,00', status: 'Pago' },
+      { data: '2023-12-10', valor: 'R$ 999,00', status: 'Pago' },
+      { data: '2023-11-10', valor: 'R$ 999,00', status: 'Pago' }
+    ]
+  }
+];
