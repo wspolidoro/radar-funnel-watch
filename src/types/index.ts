@@ -60,6 +60,7 @@ export type EmailCategory = 'onboarding' | 'promo' | 'educacao' | 'reengajamento
 export interface CTA {
   text: string;
   url: string;
+  type?: 'primary' | 'secondary' | 'link';
 }
 
 export interface Email {
@@ -78,7 +79,31 @@ export interface Email {
   links: string[];
   isAbVariant: boolean;
   abKey?: string;
-  dayOffset?: number; // D+0, D+1, etc
+  abTestId?: string;
+  abVariantName?: string;
+  dayOffset?: number;
+  htmlContent?: string;
+  textContent?: string;
+}
+
+export interface ABTest {
+  id: string;
+  name: string;
+  competitorId: string;
+  variants: {
+    id: string;
+    name: string;
+    emailId: string;
+    subject: string;
+    metrics?: {
+      opens?: number;
+      clicks?: number;
+      conversions?: number;
+    };
+  }[];
+  startDate: string;
+  winner?: string;
+  insights?: string[];
 }
 
 export interface FunnelEmail {

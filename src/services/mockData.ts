@@ -182,12 +182,14 @@ export const mockEmails: Email[] = [
     category: 'onboarding',
     topics: ['boas-vindas', 'primeiros-passos'],
     ctas: [
-      { text: 'Começar agora', url: 'https://concorrentea.com/start' },
-      { text: 'Ver tutorial', url: 'https://concorrentea.com/tutorial' }
+      { text: 'Começar agora', url: 'https://concorrentea.com/start', type: 'primary' },
+      { text: 'Ver tutorial', url: 'https://concorrentea.com/tutorial', type: 'secondary' }
     ],
     links: ['https://concorrentea.com/start', 'https://concorrentea.com/tutorial'],
     isAbVariant: false,
-    dayOffset: 0
+    dayOffset: 0,
+    htmlContent: `<!DOCTYPE html><html><head><style>body{font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;}</style></head><body><h1 style="color:#4F46E5;">Bem-vindo! 🎉</h1><p>Olá! Estamos felizes em ter você conosco. Comece sua jornada agora.</p><a href="https://concorrentea.com/start" style="display:inline-block;background:#4F46E5;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;margin:20px 10px 20px 0;">Começar agora</a><a href="https://concorrentea.com/tutorial" style="display:inline-block;background:#6B7280;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;">Ver tutorial</a></body></html>`,
+    textContent: 'Bem-vindo!\n\nOlá! Estamos felizes em ter você conosco. Comece sua jornada agora.\n\nComeçar: https://concorrentea.com/start'
   },
   {
     id: 'email-2',
@@ -201,11 +203,13 @@ export const mockEmails: Email[] = [
     category: 'educacao',
     topics: ['dicas', 'educacao'],
     ctas: [
-      { text: 'Ler mais', url: 'https://concorrentea.com/blog/dica-1' }
+      { text: 'Ler mais', url: 'https://concorrentea.com/blog/dica-1', type: 'secondary' }
     ],
     links: ['https://concorrentea.com/blog/dica-1'],
     isAbVariant: false,
-    dayOffset: 1
+    dayOffset: 1,
+    htmlContent: `<!DOCTYPE html><html><head><style>body{font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;}</style></head><body><h2 style="color:#059669;">💡 Dica #1</h2><p>Aprenda as melhores práticas para maximizar seus resultados.</p><div style="background:#F0FDF4;padding:15px;border-radius:8px;margin:20px 0;"><p><strong>Dica:</strong> Configure suas preferências primeiro.</p></div><a href="https://concorrentea.com/blog/dica-1" style="display:inline-block;background:#059669;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;">Ler mais</a></body></html>`,
+    textContent: 'Dica #1: Como maximizar seus resultados\n\nAprenda as melhores práticas.\n\nLer: https://concorrentea.com/blog/dica-1'
   },
   {
     id: 'email-3',
@@ -219,12 +223,16 @@ export const mockEmails: Email[] = [
     category: 'promo',
     topics: ['desconto', 'oferta'],
     ctas: [
-      { text: 'Aproveitar agora', url: 'https://concorrentea.com/promo?utm=email' }
+      { text: 'Aproveitar agora', url: 'https://concorrentea.com/promo?utm=email', type: 'primary' }
     ],
     links: ['https://concorrentea.com/promo?utm=email'],
     isAbVariant: true,
     abKey: 'promo-test-a',
-    dayOffset: 4
+    abTestId: 'ab-test-1',
+    abVariantName: 'Variante A',
+    dayOffset: 4,
+    htmlContent: `<!DOCTYPE html><html><head><style>body{font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;background:#FEF3C7;}</style></head><body><div style="background:white;padding:30px;border-radius:12px;"><h1 style="color:#DC2626;text-align:center;">🔥 Oferta Exclusiva!</h1><h2 style="text-align:center;color:#1F2937;">30% OFF</h2><p style="text-align:center;">Exclusivo para novos usuários. Não perca!</p><div style="text-align:center;margin:30px 0;"><a href="https://concorrentea.com/promo?utm=email" style="display:inline-block;background:#DC2626;color:white;padding:16px 32px;text-decoration:none;border-radius:8px;font-size:18px;font-weight:bold;">Aproveitar agora</a></div></div></body></html>`,
+    textContent: 'OFERTA EXCLUSIVA! 🔥\n\n30% OFF\n\nExclusivo para novos usuários.\n\nAproveitar: https://concorrentea.com/promo?utm=email'
   }
 ];
 

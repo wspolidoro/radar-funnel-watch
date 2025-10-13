@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { EmailCard } from '@/components/EmailCard';
+import { EmailViewer } from '@/components/EmailViewer';
 import { emailService } from '@/services/api';
 import type { Email } from '@/types';
 
@@ -9,6 +10,7 @@ const Library = () => {
   const [emails, setEmails] = useState<Email[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
 
   useEffect(() => {
     const loadEmails = async () => {
@@ -57,10 +59,20 @@ const Library = () => {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {emails.map((email) => (
-            <EmailCard key={email.id} email={email} />
+            <EmailCard 
+              key={email.id} 
+              email={email} 
+              onView={() => setSelectedEmail(email)}
+            />
           ))}
         </div>
       )}
+
+      <EmailViewer 
+        email={selectedEmail}
+        open={!!selectedEmail}
+        onOpenChange={(open) => !open && setSelectedEmail(null)}
+      />
     </div>
   );
 };
