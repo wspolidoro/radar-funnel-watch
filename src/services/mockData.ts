@@ -11,6 +11,7 @@ import type {
   DashboardKPIs,
   Client
 } from '@/types';
+import { emailTemplates } from './emailTemplates';
 
 export const mockUser: User = {
   id: 'user-1',
@@ -188,8 +189,248 @@ export const mockEmails: Email[] = [
     links: ['https://concorrentea.com/start', 'https://concorrentea.com/tutorial'],
     isAbVariant: false,
     dayOffset: 0,
-    htmlContent: `<!DOCTYPE html><html><head><style>body{font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;}</style></head><body><h1 style="color:#4F46E5;">Bem-vindo! 🎉</h1><p>Olá! Estamos felizes em ter você conosco. Comece sua jornada agora.</p><a href="https://concorrentea.com/start" style="display:inline-block;background:#4F46E5;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;margin:20px 10px 20px 0;">Começar agora</a><a href="https://concorrentea.com/tutorial" style="display:inline-block;background:#6B7280;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;">Ver tutorial</a></body></html>`,
+    htmlContent: emailTemplates.showcase,
     textContent: 'Bem-vindo!\n\nOlá! Estamos felizes em ter você conosco. Comece sua jornada agora.\n\nComeçar: https://concorrentea.com/start'
+  },
+  {
+    id: 'e1',
+    competitorId: 'comp-1',
+    subscriptionId: 'sub-1',
+    sentAt: '2024-01-15T09:00:00Z',
+    from: 'contato@techcorp.com',
+    subject: 'Bem-vindo ao TechCorp! Comece aqui 🚀',
+    preheader: 'Complete seu perfil e comece',
+    textBody: 'Bem-vindo! Complete seu perfil...',
+    category: 'onboarding',
+    topics: ['boas-vindas', 'setup'],
+    ctas: [
+      { text: 'Completar perfil', url: 'https://techcorp.com/perfil', type: 'primary' }
+    ],
+    links: ['https://techcorp.com/perfil'],
+    isAbVariant: false,
+    dayOffset: 0,
+    htmlContent: emailTemplates.onboarding,
+    textContent: 'Bem-vindo ao TechCorp!\n\nComplete seu perfil para começar.'
+  },
+  {
+    id: 'e2',
+    competitorId: 'comp-2',
+    subscriptionId: 'sub-1',
+    sentAt: '2024-01-17T10:00:00Z',
+    from: 'contato@techcorp.com',
+    subject: 'Descubra os principais recursos',
+    preheader: 'Tutorial completo para você',
+    textBody: 'Aprenda a usar...',
+    category: 'educacao',
+    topics: ['tutorial', 'recursos'],
+    ctas: [
+      { text: 'Ver tutorial', url: 'https://techcorp.com/tutorial', type: 'primary' }
+    ],
+    links: ['https://techcorp.com/tutorial'],
+    isAbVariant: false,
+    dayOffset: 2,
+    htmlContent: emailTemplates.education,
+    textContent: 'Descubra os principais recursos.\n\nVer tutorial: https://techcorp.com/tutorial'
+  },
+  {
+    id: 'e3',
+    competitorId: 'comp-1',
+    subscriptionId: 'sub-1',
+    sentAt: '2024-01-20T15:00:00Z',
+    from: 'contato@techcorp.com',
+    subject: 'Dica: Como maximizar seus resultados',
+    preheader: 'Guia completo de boas práticas',
+    textBody: 'Confira nossas dicas...',
+    category: 'educacao',
+    topics: ['dicas', 'otimização'],
+    ctas: [
+      { text: 'Acessar guia', url: 'https://techcorp.com/guia', type: 'primary' }
+    ],
+    links: ['https://techcorp.com/guia'],
+    isAbVariant: false,
+    dayOffset: 5,
+    htmlContent: emailTemplates.education,
+    textContent: 'Dica: Como maximizar seus resultados\n\nAcessar: https://techcorp.com/guia'
+  },
+  {
+    id: 'e4',
+    competitorId: 'comp-1',
+    subscriptionId: 'sub-1',
+    sentAt: '2024-01-25T11:00:00Z',
+    from: 'ofertas@techcorp.com',
+    subject: 'Última chance: Upgrade com 50% OFF',
+    preheader: 'Oferta exclusiva por tempo limitado',
+    textBody: 'Aproveite o desconto...',
+    category: 'promo',
+    topics: ['upgrade', 'desconto'],
+    ctas: [
+      { text: 'Fazer upgrade', url: 'https://techcorp.com/upgrade', type: 'primary' }
+    ],
+    links: ['https://techcorp.com/upgrade'],
+    isAbVariant: false,
+    dayOffset: 10,
+    htmlContent: emailTemplates.promo,
+    textContent: 'Última chance: Upgrade com 50% OFF\n\nFazer upgrade: https://techcorp.com/upgrade'
+  },
+  {
+    id: 'e5',
+    competitorId: 'comp-1',
+    subscriptionId: 'sub-1',
+    sentAt: '2024-02-01T14:30:00Z',
+    from: 'contato@techcorp.com',
+    subject: 'Você está aproveitando tudo?',
+    preheader: 'Explore todos os recursos disponíveis',
+    textBody: 'Sentimos sua falta...',
+    category: 'reengajamento',
+    topics: ['reengajamento', 'recursos'],
+    ctas: [
+      { text: 'Explorar recursos', url: 'https://techcorp.com/recursos', type: 'primary' }
+    ],
+    links: ['https://techcorp.com/recursos'],
+    isAbVariant: false,
+    dayOffset: 17,
+    htmlContent: emailTemplates.reengagement,
+    textContent: 'Você está aproveitando tudo?\n\nExplorar: https://techcorp.com/recursos'
+  },
+  {
+    id: 'e6',
+    competitorId: 'comp-2',
+    subscriptionId: 'sub-2',
+    sentAt: '2024-11-20T08:00:00Z',
+    from: 'black-friday@loja.com',
+    subject: '🔥 Black Friday chegou! Até 70% OFF',
+    preheader: 'As melhores ofertas do ano',
+    textBody: 'Black Friday imperdível...',
+    category: 'sazonal',
+    topics: ['black-friday', 'desconto'],
+    ctas: [
+      { text: 'Ver ofertas', url: 'https://loja.com/black-friday', type: 'primary' }
+    ],
+    links: ['https://loja.com/black-friday'],
+    isAbVariant: false,
+    dayOffset: 0,
+    htmlContent: emailTemplates.seasonal,
+    textContent: 'Black Friday chegou! Até 70% OFF\n\nVer ofertas: https://loja.com/black-friday'
+  },
+  {
+    id: 'e7',
+    competitorId: 'comp-2',
+    subscriptionId: 'sub-2',
+    sentAt: '2024-11-24T10:00:00Z',
+    from: 'black-friday@loja.com',
+    subject: 'Última chamada: Ofertas acabam em 24h ⏰',
+    preheader: 'Não deixe para depois!',
+    textBody: 'Última chance de aproveitar...',
+    category: 'promo',
+    topics: ['urgência', 'desconto'],
+    ctas: [
+      { text: 'Aproveitar agora', url: 'https://loja.com/promo', type: 'primary' }
+    ],
+    links: ['https://loja.com/promo'],
+    isAbVariant: false,
+    dayOffset: 4,
+    htmlContent: emailTemplates.promo,
+    textContent: 'Última chamada: Ofertas acabam em 24h\n\nAproveitar: https://loja.com/promo'
+  },
+  {
+    id: 'e8',
+    competitorId: 'comp-2',
+    subscriptionId: 'sub-2',
+    sentAt: '2024-11-25T20:00:00Z',
+    from: 'black-friday@loja.com',
+    subject: 'URGENTE: Últimas horas da Black Friday',
+    preheader: 'Acaba hoje!',
+    textBody: 'Últimas horas...',
+    category: 'promo',
+    topics: ['urgência', 'black-friday'],
+    ctas: [
+      { text: 'Comprar antes que acabe', url: 'https://loja.com/ultima-chance', type: 'primary' }
+    ],
+    links: ['https://loja.com/ultima-chance'],
+    isAbVariant: false,
+    dayOffset: 5,
+    htmlContent: emailTemplates.promo,
+    textContent: 'URGENTE: Últimas horas da Black Friday\n\nComprar: https://loja.com/ultima-chance'
+  },
+  {
+    id: 'e9',
+    competitorId: 'comp-1',
+    subscriptionId: 'sub-1',
+    sentAt: '2024-03-01T10:00:00Z',
+    from: 'contato@techcorp.com',
+    subject: 'Sentimos sua falta! Aqui está um presente',
+    preheader: 'Volte e ganhe um bônus',
+    textBody: 'Sentimos sua falta...',
+    category: 'reengajamento',
+    topics: ['reativação', 'bônus'],
+    ctas: [
+      { text: 'Voltar agora', url: 'https://techcorp.com/voltar', type: 'primary' }
+    ],
+    links: ['https://techcorp.com/voltar'],
+    isAbVariant: false,
+    dayOffset: 0,
+    htmlContent: emailTemplates.reengagement,
+    textContent: 'Sentimos sua falta!\n\nVoltar: https://techcorp.com/voltar'
+  },
+  {
+    id: 'e10',
+    competitorId: 'comp-1',
+    subscriptionId: 'sub-1',
+    sentAt: '2024-03-08T14:00:00Z',
+    from: 'news@techcorp.com',
+    subject: 'Novidades que você perdeu',
+    preheader: 'Muita coisa nova aconteceu',
+    textBody: 'Confira as novidades...',
+    category: 'educacao',
+    topics: ['novidades', 'updates'],
+    ctas: [
+      { text: 'Ver novidades', url: 'https://techcorp.com/novidades', type: 'primary' }
+    ],
+    links: ['https://techcorp.com/novidades'],
+    isAbVariant: false,
+    dayOffset: 7,
+    htmlContent: emailTemplates.education,
+    textContent: 'Novidades que você perdeu\n\nVer: https://techcorp.com/novidades'
+  },
+  {
+    id: 'e11',
+    competitorId: 'comp-1',
+    subscriptionId: 'sub-1',
+    sentAt: '2024-03-18T11:00:00Z',
+    from: 'ofertas@techcorp.com',
+    subject: 'Oferta exclusiva para você voltar',
+    preheader: 'Desconto especial de reativação',
+    textBody: 'Oferta exclusiva...',
+    category: 'promo',
+    topics: ['reativação', 'desconto'],
+    ctas: [
+      { text: 'Reativar conta', url: 'https://techcorp.com/reativar', type: 'primary' }
+    ],
+    links: ['https://techcorp.com/reativar'],
+    isAbVariant: false,
+    dayOffset: 17,
+    htmlContent: emailTemplates.promo,
+    textContent: 'Oferta exclusiva para você voltar\n\nReativar: https://techcorp.com/reativar'
+  },
+  {
+    id: 'e12',
+    competitorId: 'comp-1',
+    subscriptionId: 'sub-1',
+    sentAt: '2024-03-25T16:00:00Z',
+    from: 'contato@techcorp.com',
+    subject: 'Última tentativa: Queremos você de volta',
+    preheader: 'Última chance de retornar',
+    textBody: 'Última tentativa...',
+    category: 'reengajamento',
+    topics: ['última-chance', 'reativação'],
+    ctas: [
+      { text: 'Dar uma chance', url: 'https://techcorp.com/chance', type: 'primary' }
+    ],
+    links: ['https://techcorp.com/chance'],
+    isAbVariant: false,
+    dayOffset: 24,
+    htmlContent: emailTemplates.reengagement,
+    textContent: 'Última tentativa: Queremos você de volta\n\nDar chance: https://techcorp.com/chance'
   },
   {
     id: 'email-2',
@@ -208,7 +449,7 @@ export const mockEmails: Email[] = [
     links: ['https://concorrentea.com/blog/dica-1'],
     isAbVariant: false,
     dayOffset: 1,
-    htmlContent: `<!DOCTYPE html><html><head><style>body{font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;}</style></head><body><h2 style="color:#059669;">💡 Dica #1</h2><p>Aprenda as melhores práticas para maximizar seus resultados.</p><div style="background:#F0FDF4;padding:15px;border-radius:8px;margin:20px 0;"><p><strong>Dica:</strong> Configure suas preferências primeiro.</p></div><a href="https://concorrentea.com/blog/dica-1" style="display:inline-block;background:#059669;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;">Ler mais</a></body></html>`,
+    htmlContent: emailTemplates.education,
     textContent: 'Dica #1: Como maximizar seus resultados\n\nAprenda as melhores práticas.\n\nLer: https://concorrentea.com/blog/dica-1'
   },
   {
@@ -231,7 +472,7 @@ export const mockEmails: Email[] = [
     abTestId: 'ab-test-1',
     abVariantName: 'Variante A',
     dayOffset: 4,
-    htmlContent: `<!DOCTYPE html><html><head><style>body{font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;background:#FEF3C7;}</style></head><body><div style="background:white;padding:30px;border-radius:12px;"><h1 style="color:#DC2626;text-align:center;">🔥 Oferta Exclusiva!</h1><h2 style="text-align:center;color:#1F2937;">30% OFF</h2><p style="text-align:center;">Exclusivo para novos usuários. Não perca!</p><div style="text-align:center;margin:30px 0;"><a href="https://concorrentea.com/promo?utm=email" style="display:inline-block;background:#DC2626;color:white;padding:16px 32px;text-decoration:none;border-radius:8px;font-size:18px;font-weight:bold;">Aproveitar agora</a></div></div></body></html>`,
+    htmlContent: emailTemplates.promo,
     textContent: 'OFERTA EXCLUSIVA! 🔥\n\n30% OFF\n\nExclusivo para novos usuários.\n\nAproveitar: https://concorrentea.com/promo?utm=email'
   }
 ];

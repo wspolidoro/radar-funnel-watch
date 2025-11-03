@@ -439,6 +439,8 @@ const Funnels = () => {
                           ? Math.round((new Date(nextEmail.sentAt).getTime() - new Date(email.sentAt).getTime()) / (1000 * 60 * 60))
                           : null;
                         
+                        const fullEmail = mockEmails.find(e => e.id === email.id);
+                        
                         const categoryColors = {
                           onboarding: 'from-blue-500/10 to-blue-600/10 border-blue-500/30',
                           educacao: 'from-green-500/10 to-green-600/10 border-green-500/30',
@@ -449,55 +451,73 @@ const Funnels = () => {
                         
                         return (
                           <div key={email.id}>
-                            <Card className={`bg-gradient-to-br ${categoryColors[email.category as keyof typeof categoryColors]} border-2 transition-all hover:shadow-lg`}>
-                              <CardHeader className="pb-3">
-                                <div className="flex items-start justify-between gap-2">
-                                  <div className="space-y-2 flex-1">
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                      <Badge variant="outline" className="font-bold">D+{email.dayOffset ?? 0}</Badge>
-                                      <EmailCategoryBadge category={email.category} />
-                                      {email.cta && (
-                                        <Badge variant="secondary" className="text-xs">
-                                          <Target className="h-3 w-3 mr-1" />
-                                          CTA
-                                        </Badge>
-                                      )}
-                                    </div>
-                                    <p className="font-semibold text-base leading-tight">{email.subject}</p>
-                                    {email.cta && (
-                                      <div className="flex items-center gap-2 text-sm">
-                                        <Target className="h-3.5 w-3.5 text-primary" />
-                                        <span className="text-muted-foreground font-medium">{email.cta}</span>
-                                      </div>
-                                    )}
-                                  </div>
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className="h-8 w-8 p-0"
+                            <div className="flex gap-4">
+                              {/* Email Thumbnail */}
+                              <div className="w-48 flex-shrink-0">
+                                <div className="aspect-[3/4] rounded-lg overflow-hidden border-2 hover:border-primary transition-colors cursor-pointer"
+                                     onClick={() => {
+                                       if (fullEmail) setViewingEmail(fullEmail);
+                                     }}>
+                                  <EmailThumbnail
+                                    htmlContent={fullEmail?.htmlContent}
+                                    subject={email.subject}
                                     onClick={() => {
-                                      const fullEmail = mockEmails.find(e => e.id === email.id);
                                       if (fullEmail) setViewingEmail(fullEmail);
                                     }}
-                                  >
-                                    <Eye className="h-4 w-4" />
-                                  </Button>
+                                  />
                                 </div>
-                              </CardHeader>
-                              <CardContent className="pt-0">
-                                <p className="text-xs text-muted-foreground">
-                                  {new Date(email.sentAt).toLocaleString('pt-BR')}
-                                </p>
-                              </CardContent>
-                            </Card>
+                              </div>
+                              
+                              {/* Email Details Card */}
+                              <div className="flex-1">
+                                <Card className={`bg-gradient-to-br ${categoryColors[email.category as keyof typeof categoryColors]} border-2 transition-all hover:shadow-lg h-full`}>
+                                  <CardHeader className="pb-3">
+                                    <div className="flex items-start justify-between gap-2">
+                                      <div className="space-y-2 flex-1">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                          <Badge variant="outline" className="font-bold">D+{email.dayOffset ?? 0}</Badge>
+                                          <EmailCategoryBadge category={email.category} />
+                                          {email.cta && (
+                                            <Badge variant="secondary" className="text-xs">
+                                              <Target className="h-3 w-3 mr-1" />
+                                              CTA
+                                            </Badge>
+                                          )}
+                                        </div>
+                                        <p className="font-semibold text-base leading-tight">{email.subject}</p>
+                                        {email.cta && (
+                                          <div className="flex items-center gap-2 text-sm">
+                                            <Target className="h-3.5 w-3.5 text-primary" />
+                                            <span className="text-muted-foreground font-medium">{email.cta}</span>
+                                          </div>
+                                        )}
+                                      </div>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-8 w-8 p-0"
+                                        onClick={() => {
+                                          if (fullEmail) setViewingEmail(fullEmail);
+                                        }}
+                                      >
+                                        <Eye className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+                                  </CardHeader>
+                                  <CardContent className="pt-0">
+                                    <p className="text-xs text-muted-foreground">
+                                      {new Date(email.sentAt).toLocaleString('pt-BR')}
+                                    </p>
+                                  </CardContent>
+                                </Card>
+                              </div>
+                            </div>
                             
                             {gap !== null && (
-                              <div className="flex items-center justify-center py-2">
-                                <div className="flex flex-col items-center gap-1">
-                                  <div className="h-6 w-px bg-gradient-to-b from-border to-transparent" />
-                                  <Badge variant="outline" className="text-xs">+{gap}h</Badge>
-                                  <div className="h-6 w-px bg-gradient-to-b from-transparent to-border" />
-                                </div>
+                              <div className="flex items-center justify-center py-3">
+                                <Badge variant="outline" className="text-xs font-medium">
+                                  +{gap}h
+                                </Badge>
                               </div>
                             )}
                           </div>
