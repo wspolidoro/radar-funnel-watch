@@ -24,7 +24,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(JSON.parse(storedUser));
       setOrganization(mockOrganization);
     }
-  }, []);
+  }, [])
 
   const login = async (email: string, password: string) => {
     // Mock login - replace with real authentication
