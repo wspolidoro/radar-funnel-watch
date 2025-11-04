@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Search } from 'lucide-react';
+import { Search, LayoutGrid, List } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { EmailCard } from '@/components/EmailCard';
+import { EmailThumbnail } from '@/components/EmailThumbnail';
+import { EmailCategoryBadge } from '@/components/EmailCategoryBadge';
 import { EmailViewer } from '@/components/EmailViewer';
 import { emailService } from '@/services/api';
 import type { Email } from '@/types';
@@ -11,6 +15,7 @@ const Library = () => {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
 
   useEffect(() => {
     const loadEmails = async () => {
@@ -29,11 +34,30 @@ const Library = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Biblioteca</h1>
-        <p className="text-muted-foreground mt-1">
-          Busque e explore todos os e-mails coletados
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Biblioteca</h1>
+          <p className="text-muted-foreground mt-1">
+            Busque e explore todos os e-mails coletados
+          </p>
+        </div>
+        
+        <div className="flex items-center gap-1 border rounded-lg p-1">
+          <Button
+            variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+            size="sm"
+            onClick={() => setViewMode('list')}
+          >
+            <List className="h-4 w-4" />
+          </Button>
+          <Button
+            variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+            size="sm"
+            onClick={() => setViewMode('grid')}
+          >
+            <LayoutGrid className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       <div className="relative">
@@ -56,14 +80,38 @@ const Library = () => {
             {search ? 'Nenhum e-mail encontrado' : 'Nenhum e-mail na biblioteca ainda'}
           </p>
         </div>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      ) : viewMode === 'list' ? (
+        <div className="space-y-4">
           {emails.map((email) => (
             <EmailCard 
               key={email.id} 
               email={email} 
               onView={() => setSelectedEmail(email)}
             />
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          {emails.map((email) => (
+            <div key={email.id} className="space-y-2">
+              <div className="aspect-[3/4] rounded-lg overflow-hidden border hover:border-primary transition-colors">
+                <EmailThumbnail
+                  htmlContent={email.htmlContent}
+                  subject={email.subject}
+                  onClick={() => setSelectedEmail(email)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <EmailCategoryBadge category={email.category} />
+                  {email.isAbVariant && (
+                    <Badge variant="outline" className="text-xs">A/B</Badge>
+                  )}
+                </div>
+                <h4 className="text-sm font-medium line-clamp-2 leading-tight">{email.subject}</h4>
+                <p className="text-xs text-muted-foreground truncate">{email.from}</p>
+              </div>
+            </div>
           ))}
         </div>
       )}

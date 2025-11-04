@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { GitBranch, Eye, Download, GitCompare, Mail, Clock, TrendingUp, Filter, Target } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 import {
   Table,
   TableBody,
@@ -29,6 +30,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmailCategoryBadge } from '@/components/EmailCategoryBadge';
+import { EmailThumbnail } from '@/components/EmailThumbnail';
 import { EmailViewer } from '@/components/EmailViewer';
 import { funnelService, competitorService } from '@/services/api';
 import { mockEmails } from '@/services/mockData';
@@ -367,79 +369,162 @@ const Funnels = () => {
                   <TabsTrigger value="insights">Insights</TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="flow" className="space-y-3 mt-6">
-                  {selectedFunnel.emails.map((email, index) => {
-                    const categoryColors = {
-                      onboarding: 'from-blue-500/10 to-blue-600/10 border-blue-500/30',
-                      educacao: 'from-green-500/10 to-green-600/10 border-green-500/30',
-                      promo: 'from-red-500/10 to-red-600/10 border-red-500/30',
-                      reengajamento: 'from-orange-500/10 to-orange-600/10 border-orange-500/30',
-                      sazonal: 'from-purple-500/10 to-purple-600/10 border-purple-500/30'
-                    };
-                    
-                    return (
-                      <div key={email.id}>
-                        <Card className={`bg-gradient-to-br ${categoryColors[email.category]} border-2 transition-all hover:shadow-lg`}>
-                          <CardHeader className="pb-3">
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="space-y-2 flex-1">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <Badge variant="outline" className="font-bold">D+{email.dayOffset}</Badge>
-                                  <EmailCategoryBadge category={email.category} />
-                                  {email.cta && (
-                                    <Badge variant="secondary" className="text-xs">
-                                      <Target className="h-3 w-3 mr-1" />
-                                      CTA
-                                    </Badge>
-                                  )}
-                                </div>
-                                <p className="font-semibold text-base leading-tight">{email.subject}</p>
-                                {email.cta && (
-                                  <div className="flex items-center gap-2 text-sm">
-                                    <Target className="h-3.5 w-3.5 text-primary" />
-                                    <span className="text-muted-foreground font-medium">{email.cta}</span>
-                                  </div>
-                                )}
-                              </div>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-8 w-8 p-0"
-                                onClick={() => {
-                                  // Find full email in mockEmails
-                                  const fullEmail = mockEmails.find(e => 
-                                    e.subject === email.subject || 
-                                    e.dayOffset === email.dayOffset
-                                  );
-                                  if (fullEmail) setViewingEmail(fullEmail);
-                                }}
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </CardHeader>
-                          <CardContent className="pt-0">
-                            <p className="text-xs text-muted-foreground">
-                              {new Date(email.sentAt).toLocaleString('pt-BR')}
-                            </p>
-                          </CardContent>
-                        </Card>
+                <TabsContent value="flow" className="space-y-6 mt-6">
+                  {/* Grid de Miniaturas */}
+                  <div>
+                    <h4 className="text-sm font-semibold mb-4">Sequência de E-mails</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                      {selectedFunnel.emails.map((email) => {
+                        const fullEmail = mockEmails.find(e => e.id === email.id);
+                        const categoryColors = {
+                          onboarding: 'border-blue-500/40 shadow-blue-500/20',
+                          educacao: 'border-green-500/40 shadow-green-500/20',
+                          promo: 'border-red-500/40 shadow-red-500/20',
+                          reengajamento: 'border-orange-500/40 shadow-orange-500/20',
+                          sazonal: 'border-purple-500/40 shadow-purple-500/20',
+                        };
                         
-                        {index < selectedFunnel.emails.length - 1 && (
-                          <div className="flex items-center justify-center py-2">
-                            <div className="flex flex-col items-center gap-1">
-                              <div className="h-6 w-px bg-gradient-to-b from-border to-transparent" />
-                              <div className="px-3 py-1 bg-muted rounded-full text-muted-foreground text-xs font-medium">
-                                +{selectedFunnel.emails[index + 1].dayOffset - email.dayOffset}d 
-                                ({Math.round((selectedFunnel.emails[index + 1].dayOffset - email.dayOffset) * 24)}h)
+                        return (
+                          <div
+                            key={email.id}
+                            className={cn(
+                              "relative group border-2 rounded-lg overflow-hidden transition-all hover:scale-105 hover:shadow-lg",
+                              categoryColors[email.category as keyof typeof categoryColors] || 'border-border'
+                            )}
+                          >
+                            <div className="aspect-[3/4] relative bg-white">
+                              <EmailThumbnail
+                                htmlContent={fullEmail?.htmlContent}
+                                subject={email.subject}
+                                onClick={() => {
+                                  if (fullEmail) {
+                                    setViewingEmail(fullEmail);
+                                  }
+                                }}
+                              />
+                            </div>
+                            
+                            <div className="p-3 space-y-2 bg-card">
+                              <div className="flex items-center justify-between gap-2">
+                                <Badge variant="secondary" className="text-xs font-bold">
+                                  D+{email.dayOffset ?? 0}
+                                </Badge>
+                                <EmailCategoryBadge category={email.category} />
                               </div>
-                              <div className="h-6 w-px bg-gradient-to-b from-transparent to-border" />
+                              
+                              <h4 className="text-sm font-medium line-clamp-2 leading-tight">
+                                {email.subject}
+                              </h4>
+                              
+                              {email.cta && (
+                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                  <Target className="h-3 w-3 flex-shrink-0" />
+                                  <span className="truncate">{email.cta}</span>
+                                </div>
+                              )}
                             </div>
                           </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                        );
+                      })}
+                    </div>
+                  </div>
+                  
+                  {/* Timeline View */}
+                  <div className="border-t pt-6">
+                    <h4 className="text-sm font-semibold mb-4">Linha do Tempo Detalhada</h4>
+                    <div className="space-y-3">
+                      {selectedFunnel.emails.map((email, index) => {
+                        const nextEmail = selectedFunnel.emails[index + 1];
+                        const gap = nextEmail 
+                          ? Math.round((new Date(nextEmail.sentAt).getTime() - new Date(email.sentAt).getTime()) / (1000 * 60 * 60))
+                          : null;
+                        
+                        const fullEmail = mockEmails.find(e => e.id === email.id);
+                        
+                        const categoryColors = {
+                          onboarding: 'from-blue-500/10 to-blue-600/10 border-blue-500/30',
+                          educacao: 'from-green-500/10 to-green-600/10 border-green-500/30',
+                          promo: 'from-red-500/10 to-red-600/10 border-red-500/30',
+                          reengajamento: 'from-orange-500/10 to-orange-600/10 border-orange-500/30',
+                          sazonal: 'from-purple-500/10 to-purple-600/10 border-purple-500/30'
+                        };
+                        
+                        return (
+                          <div key={email.id}>
+                            <div className="flex gap-4">
+                              {/* Email Thumbnail */}
+                              <div className="w-48 flex-shrink-0">
+                                <div className="aspect-[3/4] rounded-lg overflow-hidden border-2 hover:border-primary transition-colors cursor-pointer"
+                                     onClick={() => {
+                                       if (fullEmail) setViewingEmail(fullEmail);
+                                     }}>
+                                  <EmailThumbnail
+                                    htmlContent={fullEmail?.htmlContent}
+                                    subject={email.subject}
+                                    onClick={() => {
+                                      if (fullEmail) setViewingEmail(fullEmail);
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                              
+                              {/* Email Details Card */}
+                              <div className="flex-1">
+                                <Card className={`bg-gradient-to-br ${categoryColors[email.category as keyof typeof categoryColors]} border-2 transition-all hover:shadow-lg h-full`}>
+                                  <CardHeader className="pb-3">
+                                    <div className="flex items-start justify-between gap-2">
+                                      <div className="space-y-2 flex-1">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                          <Badge variant="outline" className="font-bold">D+{email.dayOffset ?? 0}</Badge>
+                                          <EmailCategoryBadge category={email.category} />
+                                          {email.cta && (
+                                            <Badge variant="secondary" className="text-xs">
+                                              <Target className="h-3 w-3 mr-1" />
+                                              CTA
+                                            </Badge>
+                                          )}
+                                        </div>
+                                        <p className="font-semibold text-base leading-tight">{email.subject}</p>
+                                        {email.cta && (
+                                          <div className="flex items-center gap-2 text-sm">
+                                            <Target className="h-3.5 w-3.5 text-primary" />
+                                            <span className="text-muted-foreground font-medium">{email.cta}</span>
+                                          </div>
+                                        )}
+                                      </div>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-8 w-8 p-0"
+                                        onClick={() => {
+                                          if (fullEmail) setViewingEmail(fullEmail);
+                                        }}
+                                      >
+                                        <Eye className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+                                  </CardHeader>
+                                  <CardContent className="pt-0">
+                                    <p className="text-xs text-muted-foreground">
+                                      {new Date(email.sentAt).toLocaleString('pt-BR')}
+                                    </p>
+                                  </CardContent>
+                                </Card>
+                              </div>
+                            </div>
+                            
+                            {gap !== null && (
+                              <div className="flex items-center justify-center py-3">
+                                <Badge variant="outline" className="text-xs font-medium">
+                                  +{gap}h
+                                </Badge>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </TabsContent>
 
                 <TabsContent value="stats" className="space-y-4 mt-6">
