@@ -53,6 +53,7 @@ import { CompetitorCard } from '@/components/CompetitorCard';
 import { SparklineChart } from '@/components/SparklineChart';
 import { Separator } from '@/components/ui/separator';
 import { useNavigate } from 'react-router-dom';
+import { NewCompetitorForm } from '@/components/NewCompetitorForm';
 
 const statusColors = {
   active: 'bg-green-500/10 text-green-700 border-green-500/20',
@@ -76,6 +77,7 @@ export default function Competitors() {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [selectedForComparison, setSelectedForComparison] = useState<string[]>([]);
   const [isComparisonOpen, setIsComparisonOpen] = useState(false);
+  const [isNewCompetitorOpen, setIsNewCompetitorOpen] = useState(false);
 
   const { data: competitorsData, isLoading } = useQuery({
     queryKey: ['competitors', search],
@@ -218,7 +220,7 @@ export default function Competitors() {
             <Download className="h-4 w-4" />
             Exportar
           </Button>
-          <Button onClick={() => navigate('/onboarding')}>
+          <Button onClick={() => setIsNewCompetitorOpen(true)}>
             <Plus className="h-4 w-4" />
             Novo Concorrente
           </Button>
@@ -321,7 +323,7 @@ export default function Competitors() {
                 : 'Nenhum concorrente cadastrado. Clique em "Novo Concorrente" para começar.'}
             </p>
             {!search && statusFilter === 'todos' && !showNewActivity && (
-              <Button onClick={() => navigate('/onboarding')}>
+              <Button onClick={() => setIsNewCompetitorOpen(true)}>
                 <Plus className="h-4 w-4" />
                 Novo Concorrente
               </Button>
@@ -727,6 +729,31 @@ export default function Competitors() {
                 ))}
               </div>
             </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* New Competitor Sheet */}
+      <Sheet open={isNewCompetitorOpen} onOpenChange={setIsNewCompetitorOpen}>
+        <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Novo Concorrente</SheetTitle>
+            <SheetDescription>
+              Preencha os dados para iniciar o monitoramento de um novo concorrente
+            </SheetDescription>
+          </SheetHeader>
+          <div className="mt-6">
+            <NewCompetitorForm 
+              onSubmit={(data) => {
+                toast({
+                  title: 'Concorrente cadastrado!',
+                  description: `${data.name} foi adicionado com sucesso.`,
+                });
+                setIsNewCompetitorOpen(false);
+                queryClient.invalidateQueries({ queryKey: ['competitors'] });
+              }}
+              onCancel={() => setIsNewCompetitorOpen(false)}
+            />
           </div>
         </SheetContent>
       </Sheet>
