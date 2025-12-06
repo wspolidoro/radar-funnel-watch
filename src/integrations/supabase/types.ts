@@ -14,7 +14,104 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      captured_newsletters: {
+        Row: {
+          category: string | null
+          competitor_id: string | null
+          created_at: string
+          from_email: string
+          from_name: string | null
+          html_content: string | null
+          id: string
+          is_processed: boolean | null
+          received_at: string
+          seed_id: string
+          subject: string
+          text_content: string | null
+        }
+        Insert: {
+          category?: string | null
+          competitor_id?: string | null
+          created_at?: string
+          from_email: string
+          from_name?: string | null
+          html_content?: string | null
+          id?: string
+          is_processed?: boolean | null
+          received_at: string
+          seed_id: string
+          subject: string
+          text_content?: string | null
+        }
+        Update: {
+          category?: string | null
+          competitor_id?: string | null
+          created_at?: string
+          from_email?: string
+          from_name?: string | null
+          html_content?: string | null
+          id?: string
+          is_processed?: boolean | null
+          received_at?: string
+          seed_id?: string
+          subject?: string
+          text_content?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "captured_newsletters_seed_id_fkey"
+            columns: ["seed_id"]
+            isOneToOne: false
+            referencedRelation: "email_seeds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_seeds: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          imap_host: string | null
+          imap_port: number | null
+          is_active: boolean | null
+          last_sync_at: string | null
+          name: string
+          provider: string
+          updated_at: string
+          use_ssl: boolean | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          imap_host?: string | null
+          imap_port?: number | null
+          is_active?: boolean | null
+          last_sync_at?: string | null
+          name: string
+          provider: string
+          updated_at?: string
+          use_ssl?: boolean | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          imap_host?: string | null
+          imap_port?: number | null
+          is_active?: boolean | null
+          last_sync_at?: string | null
+          name?: string
+          provider?: string
+          updated_at?: string
+          use_ssl?: boolean | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

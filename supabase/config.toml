@@ -1,1 +1,4 @@
 project_id = "owclqmcjxlypohbfddnw"
+
+[functions.sync-imap]
+verify_jwt = true

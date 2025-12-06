@@ -2,8 +2,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Mail, Users, Bell, CreditCard } from 'lucide-react';
+import { Mail, Users, Bell, CreditCard, Plug } from 'lucide-react';
 import { RoleGuard } from '@/components/RoleGuard';
+import { EmailSeedManager } from '@/components/EmailSeedManager';
 
 const Settings = () => {
   return (
@@ -36,33 +37,33 @@ const Settings = () => {
         </TabsList>
 
         <TabsContent value="seeds" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>E-mails Seed</CardTitle>
-              <CardDescription>
-                E-mails configurados para receber newsletters dos concorrentes
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                <p className="mb-4">Configure seus e-mails seed no onboarding</p>
-                <Button variant="outline">Adicionar Seed</Button>
-              </div>
-            </CardContent>
-          </Card>
+          <EmailSeedManager />
 
           <Card>
             <CardHeader>
-              <CardTitle>Integrações</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Plug className="h-5 w-5" />
+                Integrações Diretas
+              </CardTitle>
               <CardDescription>
-                Conecte provedores de e-mail para coletar mensagens automaticamente
+                Conecte provedores de e-mail via OAuth para acesso simplificado
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
-              {['Gmail', 'Outlook', 'Mailgun', 'SendGrid'].map(provider => (
-                <div key={provider} className="flex items-center justify-between p-3 border rounded-lg">
-                  <span className="font-medium">{provider}</span>
-                  <Button variant="outline" size="sm">Conectar</Button>
+              {[
+                { name: 'Gmail', description: 'Conectar via conta Google', available: false },
+                { name: 'Outlook', description: 'Conectar via conta Microsoft', available: false },
+                { name: 'Mailgun', description: 'Integração via API', available: false },
+                { name: 'SendGrid', description: 'Integração via Inbound Parse', available: false },
+              ].map(provider => (
+                <div key={provider.name} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div>
+                    <span className="font-medium">{provider.name}</span>
+                    <p className="text-sm text-muted-foreground">{provider.description}</p>
+                  </div>
+                  <Button variant="outline" size="sm" disabled={!provider.available}>
+                    {provider.available ? 'Conectar' : 'Em breve'}
+                  </Button>
                 </div>
               ))}
             </CardContent>
@@ -91,6 +92,13 @@ const Settings = () => {
                   <p className="text-sm text-muted-foreground">Veja alertas dentro da plataforma</p>
                 </div>
                 <Badge>Ativo</Badge>
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">Novos E-mails Detectados</p>
+                  <p className="text-sm text-muted-foreground">Notificar quando newsletters são capturadas</p>
+                </div>
+                <Badge variant="secondary">Configurar</Badge>
               </div>
             </CardContent>
           </Card>
