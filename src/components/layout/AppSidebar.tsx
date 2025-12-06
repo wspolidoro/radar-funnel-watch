@@ -5,7 +5,8 @@ import {
   GitBranch, 
   FileText, 
   Settings,
-  Building2
+  Building2,
+  Inbox
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import {
@@ -24,6 +25,7 @@ const menuItems = [
   { title: 'Dashboard', url: '/', icon: LayoutDashboard },
   { title: 'Concorrentes', url: '/competitors', icon: Users },
   { title: 'Biblioteca', url: '/library', icon: Library },
+  { title: 'Newsletters', url: '/newsletters', icon: Inbox },
   { title: 'Funis', url: '/funnels', icon: GitBranch },
   { title: 'Relatórios', url: '/reports', icon: FileText },
   { title: 'Clientes', url: '/clients', icon: Building2 },
