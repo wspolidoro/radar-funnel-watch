@@ -7,9 +7,10 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Inbox, Search, Filter, Mail, Calendar, User, Tag, ExternalLink, Loader2, RefreshCw } from 'lucide-react';
+import { Inbox, Search, Filter, Mail, Calendar, User, Tag, ExternalLink, Loader2, RefreshCw, Sparkles } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useToast } from '@/hooks/use-toast';
 
 interface CapturedNewsletter {
   id: string;
@@ -38,14 +39,17 @@ const categoryLabels: Record<string, { label: string; color: string }> = {
   sazonal: { label: 'Sazonal', color: 'bg-purple-500' },
   newsletter: { label: 'Newsletter', color: 'bg-cyan-500' },
   transacional: { label: 'Transacional', color: 'bg-gray-500' },
+  outros: { label: 'Outros', color: 'bg-slate-500' },
 };
 
 const CapturedNewsletters = () => {
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [seedFilter, setSeedFilter] = useState<string>('all');
   const [selectedNewsletter, setSelectedNewsletter] = useState<CapturedNewsletter | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [isCategorizing, setIsCategorizing] = useState(false);
 
   const { data: newsletters, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['captured-newsletters', searchQuery, categoryFilter, seedFilter],
@@ -98,6 +102,33 @@ const CapturedNewsletters = () => {
     setIsDetailOpen(true);
   };
 
+  const handleCategorizeAll = async () => {
+    setIsCategorizing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('categorize-newsletter', {
+        body: { batchProcess: true }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Categorização concluída',
+        description: `${data.processed} newsletters foram categorizadas com IA.`,
+      });
+      
+      refetch();
+    } catch (error) {
+      console.error('Error categorizing newsletters:', error);
+      toast({
+        title: 'Erro na categorização',
+        description: 'Não foi possível categorizar as newsletters. Tente novamente.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsCategorizing(false);
+    }
+  };
+
   const getCategoryBadge = (category: string | null) => {
     if (!category) return <Badge variant="outline">Não classificado</Badge>;
     const cat = categoryLabels[category];
@@ -121,15 +152,26 @@ const CapturedNewsletters = () => {
             Visualize e analise as newsletters detectadas automaticamente
           </p>
         </div>
-        <Button 
-          variant="outline" 
-          onClick={() => refetch()}
-          disabled={isRefetching}
-          className="gap-2"
-        >
-          <RefreshCw className={`h-4 w-4 ${isRefetching ? 'animate-spin' : ''}`} />
-          Atualizar
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={handleCategorizeAll}
+            disabled={isCategorizing}
+            className="gap-2"
+          >
+            <Sparkles className={`h-4 w-4 ${isCategorizing ? 'animate-pulse' : ''}`} />
+            {isCategorizing ? 'Categorizando...' : 'Categorizar com IA'}
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={() => refetch()}
+            disabled={isRefetching}
+            className="gap-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${isRefetching ? 'animate-spin' : ''}`} />
+            Atualizar
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
