@@ -15,6 +15,7 @@ import Clients from "./pages/Clients";
 import Onboarding from "./pages/Onboarding";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
+import CapturedNewsletters from "./pages/CapturedNewsletters";
 
 const queryClient = new QueryClient();
 
@@ -48,6 +49,7 @@ const App = () => (
               <Route path="/funnels" element={<Funnels />} />
               <Route path="/reports" element={<Reports />} />
               <Route path="/clients" element={<Clients />} />
+              <Route path="/newsletters" element={<CapturedNewsletters />} />
               <Route path="/settings" element={<Settings />} />
             </Route>
             <Route path="*" element={<NotFound />} />
