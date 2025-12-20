@@ -9,7 +9,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
 import { useNavigate } from 'react-router-dom';
@@ -24,10 +23,7 @@ export const AppNavbar = () => {
   const userInitial = (profile?.full_name?.charAt(0) || userEmail.charAt(0) || 'U').toUpperCase();
 
   return (
-    <header className="h-16 border-b border-border bg-card flex items-center px-4 gap-4">
-      <SidebarTrigger />
-      
-      <div className="flex-1 flex items-center justify-between">
+    <div className="flex-1 flex items-center justify-between">
         {/* Organization name */}
         <div className="flex items-center gap-2">
           <span className="font-medium">RadarMail</span>
@@ -90,6 +86,5 @@ export const AppNavbar = () => {
           </DropdownMenu>
         </div>
       </div>
-    </header>
   );
 };
