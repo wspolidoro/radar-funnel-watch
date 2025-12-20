@@ -201,8 +201,8 @@ export default function AdminClients() {
   }) || [];
 
   const handleViewDetails = (subscription: SubscriptionWithDetails) => {
-    setSelectedSubscription(subscription);
-    setIsDetailsOpen(true);
+    // Navigate to client details page
+    window.location.href = `/admin/clients/${subscription.user_id}`;
   };
 
   const handleExport = () => {

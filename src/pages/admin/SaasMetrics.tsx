@@ -7,7 +7,8 @@ import {
   CreditCard,
   UserMinus,
   Calendar,
-  BarChart3
+  BarChart3,
+  Grid3X3
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -25,9 +26,10 @@ import {
   ResponsiveContainer,
   Legend,
   AreaChart,
-  Area
+  Area,
+  Cell
 } from 'recharts';
-import { format, subDays, subMonths, startOfMonth, eachDayOfInterval, eachMonthOfInterval } from 'date-fns';
+import { format, subDays, subMonths, startOfMonth, eachDayOfInterval, eachMonthOfInterval, differenceInMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useState, useMemo } from 'react';
 import { RoleGuard } from '@/components/RoleGuard';
@@ -204,6 +206,68 @@ export default function SaasMetrics() {
         churn: Math.round(churnRate * 10) / 10
       };
     });
+  }, [subscriptions, period]);
+
+  // Cohort analysis data
+  const cohortData = useMemo(() => {
+    if (!subscriptions) return [];
+
+    const cohortMonths = eachMonthOfInterval({
+      start: subMonths(new Date(), parseInt(period) - 1),
+      end: new Date()
+    });
+
+    // Group users by their signup month (cohort)
+    const cohorts = cohortMonths.map((cohortMonth) => {
+      const cohortStart = startOfMonth(cohortMonth);
+      const cohortEnd = startOfMonth(subMonths(cohortMonth, -1));
+      
+      // Users who signed up in this cohort month
+      const cohortUsers = subscriptions.filter(s => {
+        const createdDate = new Date(s.created_at);
+        return createdDate >= cohortStart && createdDate < cohortEnd;
+      });
+
+      if (cohortUsers.length === 0) {
+        return null;
+      }
+
+      const cohortLabel = format(cohortMonth, 'MMM/yy', { locale: ptBR });
+      const cohortSize = cohortUsers.length;
+
+      // Calculate retention for each subsequent month
+      const retentionData: Record<string, number> = {
+        cohort: cohortLabel as any,
+        size: cohortSize,
+        'Mês 0': 100 // Always 100% in month 0
+      };
+
+      // Check retention for months 1-6 after signup
+      for (let monthOffset = 1; monthOffset <= 6; monthOffset++) {
+        const checkDate = subMonths(cohortMonth, -monthOffset);
+        
+        // Skip if check date is in the future
+        if (checkDate > new Date()) {
+          retentionData[`Mês ${monthOffset}`] = -1; // -1 means no data yet
+          continue;
+        }
+
+        const retained = cohortUsers.filter(s => {
+          // User is retained if they're still active or were canceled after this check date
+          if (s.status === 'active') return true;
+          if (!s.canceled_at) return true;
+          
+          const canceledDate = new Date(s.canceled_at);
+          return canceledDate >= checkDate;
+        }).length;
+
+        retentionData[`Mês ${monthOffset}`] = Math.round((retained / cohortSize) * 100);
+      }
+
+      return retentionData;
+    }).filter(Boolean);
+
+    return cohorts;
   }, [subscriptions, period]);
 
   const isLoading = loadingSubscriptions || loadingPayments;
@@ -454,6 +518,70 @@ export default function SaasMetrics() {
                 />
               </LineChart>
             </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Cohort Analysis Chart */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Grid3X3 className="h-5 w-5" />
+              Análise de Cohort - Retenção
+            </CardTitle>
+            <CardDescription>
+              Percentual de retenção por mês de cadastro
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {cohortData.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left p-2 font-medium">Cohort</th>
+                      <th className="text-center p-2 font-medium">Usuários</th>
+                      <th className="text-center p-2 font-medium">Mês 0</th>
+                      <th className="text-center p-2 font-medium">Mês 1</th>
+                      <th className="text-center p-2 font-medium">Mês 2</th>
+                      <th className="text-center p-2 font-medium">Mês 3</th>
+                      <th className="text-center p-2 font-medium">Mês 4</th>
+                      <th className="text-center p-2 font-medium">Mês 5</th>
+                      <th className="text-center p-2 font-medium">Mês 6</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cohortData.map((row: any, idx) => (
+                      <tr key={idx} className="border-b hover:bg-muted/50">
+                        <td className="p-2 font-medium">{row.cohort}</td>
+                        <td className="text-center p-2">{row.size}</td>
+                        {['Mês 0', 'Mês 1', 'Mês 2', 'Mês 3', 'Mês 4', 'Mês 5', 'Mês 6'].map((month) => {
+                          const value = row[month];
+                          if (value === undefined || value === -1) {
+                            return <td key={month} className="text-center p-2 text-muted-foreground">-</td>;
+                          }
+                          const intensity = value / 100;
+                          const bgColor = `rgba(34, 197, 94, ${intensity * 0.7})`;
+                          return (
+                            <td 
+                              key={month} 
+                              className="text-center p-2 font-medium"
+                              style={{ backgroundColor: bgColor }}
+                            >
+                              {value}%
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <Grid3X3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>Dados insuficientes para análise de cohort</p>
+              </div>
+            )}
           </CardContent>
         </Card>
 

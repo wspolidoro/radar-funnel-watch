@@ -23,6 +23,7 @@ import AdminPlans from "./pages/admin/Plans";
 import AdminPayments from "./pages/admin/Payments";
 import AdminIntegrations from "./pages/admin/Integrations";
 import AdminClients from "./pages/admin/Clients";
+import AdminClientDetails from "./pages/admin/ClientDetails";
 import AdminSaasMetrics from "./pages/admin/SaasMetrics";
 
 const queryClient = new QueryClient();
@@ -76,6 +77,7 @@ const App = () => (
               <Route path="/admin/payments" element={<AdminPayments />} />
               <Route path="/admin/integrations" element={<AdminIntegrations />} />
               <Route path="/admin/clients" element={<AdminClients />} />
+              <Route path="/admin/clients/:userId" element={<AdminClientDetails />} />
               <Route path="/admin/metrics" element={<AdminSaasMetrics />} />
             </Route>
             <Route path="*" element={<NotFound />} />
