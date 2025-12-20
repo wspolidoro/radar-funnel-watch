@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import { Plus, Copy, Mail, CheckCircle, Clock, Trash2, ExternalLink, Loader2 } from 'lucide-react';
+import { Plus, Copy, Mail, CheckCircle, Clock, Trash2, ExternalLink, Loader2, Search, MailCheck, MailX, Inbox } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -38,6 +38,13 @@ interface EmailDomain {
   is_active: boolean;
 }
 
+interface AliasStats {
+  total: number;
+  active: number;
+  inactive: number;
+  totalEmails: number;
+}
+
 export function AliasManagerSettings() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -46,6 +53,7 @@ export function AliasManagerSettings() {
   const [selectedDomain, setSelectedDomain] = useState('');
   const [aliasName, setAliasName] = useState('');
   const [aliasDescription, setAliasDescription] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Fetch domains
   const { data: domains = [] } = useQuery({
@@ -77,6 +85,31 @@ export function AliasManagerSettings() {
     },
     enabled: !!user,
   });
+
+  // Calculate stats
+  const stats: AliasStats = useMemo(() => {
+    if (!aliases.length) return { total: 0, active: 0, inactive: 0, totalEmails: 0 };
+    
+    return aliases.reduce((acc, alias) => ({
+      total: acc.total + 1,
+      active: acc.active + (alias.is_confirmed ? 1 : 0),
+      inactive: acc.inactive + (alias.is_confirmed ? 0 : 1),
+      totalEmails: acc.totalEmails + (alias.email_count || 0),
+    }), { total: 0, active: 0, inactive: 0, totalEmails: 0 });
+  }, [aliases]);
+
+  // Filter aliases based on search
+  const filteredAliases = useMemo(() => {
+    if (!searchQuery.trim()) return aliases;
+    
+    const query = searchQuery.toLowerCase();
+    return aliases.filter(alias => 
+      alias.alias.toLowerCase().includes(query) ||
+      alias.name?.toLowerCase().includes(query) ||
+      alias.sender_name?.toLowerCase().includes(query) ||
+      alias.description?.toLowerCase().includes(query)
+    );
+  }, [aliases, searchQuery]);
 
   // Create alias mutation
   const createAliasMutation = useMutation({
@@ -271,7 +304,55 @@ export function AliasManagerSettings() {
           </DialogContent>
         </Dialog>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-4">
+        {/* Stats Cards */}
+        {aliases.length > 0 && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="p-3 bg-muted/50 rounded-lg border">
+              <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                <Mail className="h-4 w-4" />
+                <span className="text-xs font-medium">Total</span>
+              </div>
+              <p className="text-2xl font-bold">{stats.total}</p>
+            </div>
+            <div className="p-3 bg-success/10 rounded-lg border border-success/20">
+              <div className="flex items-center gap-2 text-success mb-1">
+                <MailCheck className="h-4 w-4" />
+                <span className="text-xs font-medium">Ativos</span>
+              </div>
+              <p className="text-2xl font-bold text-success">{stats.active}</p>
+            </div>
+            <div className="p-3 bg-muted/50 rounded-lg border">
+              <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                <MailX className="h-4 w-4" />
+                <span className="text-xs font-medium">Inativos</span>
+              </div>
+              <p className="text-2xl font-bold">{stats.inactive}</p>
+            </div>
+            <div className="p-3 bg-primary/10 rounded-lg border border-primary/20">
+              <div className="flex items-center gap-2 text-primary mb-1">
+                <Inbox className="h-4 w-4" />
+                <span className="text-xs font-medium">Emails</span>
+              </div>
+              <p className="text-2xl font-bold text-primary">{stats.totalEmails}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Search Field */}
+        {aliases.length > 0 && (
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por email, nome, remetente..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+        )}
+
+        {/* Aliases List */}
         {domains.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             <Mail className="w-12 h-12 mx-auto mb-4 opacity-50" />
@@ -288,9 +369,15 @@ export function AliasManagerSettings() {
             <p>Nenhum alias criado ainda</p>
             <p className="text-sm">Clique em "Novo Alias" para começar</p>
           </div>
+        ) : filteredAliases.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
+            <p>Nenhum alias encontrado</p>
+            <p className="text-sm">Tente outro termo de busca</p>
+          </div>
         ) : (
           <div className="space-y-3">
-            {aliases.map((alias) => (
+            {filteredAliases.map((alias) => (
               <div
                 key={alias.id}
                 className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
@@ -306,7 +393,7 @@ export function AliasManagerSettings() {
                     </button>
                     {getStatusBadge(alias)}
                   </div>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
                     {alias.name && <span>{alias.name}</span>}
                     {alias.sender_name && (
                       <span className="flex items-center gap-1">
