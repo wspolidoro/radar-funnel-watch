@@ -188,6 +188,7 @@ export type Database = {
           domain: string
           id: string
           is_active: boolean | null
+          is_platform_domain: boolean | null
           is_verified: boolean | null
           provider: string
           updated_at: string
@@ -199,6 +200,7 @@ export type Database = {
           domain: string
           id?: string
           is_active?: boolean | null
+          is_platform_domain?: boolean | null
           is_verified?: boolean | null
           provider?: string
           updated_at?: string
@@ -210,6 +212,7 @@ export type Database = {
           domain?: string
           id?: string
           is_active?: boolean | null
+          is_platform_domain?: boolean | null
           is_verified?: boolean | null
           provider?: string
           updated_at?: string
