@@ -4,7 +4,18 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import { AppLayout } from "@/components/layout/AppLayout";
+
+// Layouts
+import { ClientLayout } from "@/components/layout/ClientLayout";
+import { AdminLayout } from "@/components/layout/AdminLayout";
+
+// Auth Pages
+import Login from "./pages/Login";
+import ResetPassword from "./pages/ResetPassword";
+import Onboarding from "./pages/Onboarding";
+import NotFound from "./pages/NotFound";
+
+// Client Pages
 import Dashboard from "./pages/Dashboard";
 import Senders from "./pages/Senders";
 import SenderDetails from "./pages/SenderDetails";
@@ -13,13 +24,12 @@ import Funnels from "./pages/Funnels";
 import Reports from "./pages/Reports";
 import NewReport from "./pages/NewReport";
 import Settings from "./pages/Settings";
-import Clients from "./pages/Clients";
-import Onboarding from "./pages/Onboarding";
-import Login from "./pages/Login";
-import ResetPassword from "./pages/ResetPassword";
-import NotFound from "./pages/NotFound";
 import CapturedNewsletters from "./pages/CapturedNewsletters";
 import Analytics from "./pages/Analytics";
+import ClientAlerts from "./pages/app/ClientAlerts";
+
+// Admin SaaS Pages
+import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminPlans from "./pages/admin/Plans";
 import AdminPayments from "./pages/admin/Payments";
 import AdminIntegrations from "./pages/admin/Integrations";
@@ -52,38 +62,57 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
+            {/* Public Routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            
+            {/* Onboarding */}
             <Route path="/onboarding" element={
               <ProtectedRoute>
                 <Onboarding />
               </ProtectedRoute>
             } />
-            <Route element={
+
+            {/* Root redirect */}
+            <Route path="/" element={<Navigate to="/app" replace />} />
+
+            {/* Client Routes - /app/* */}
+            <Route path="/app" element={
               <ProtectedRoute>
-                <AppLayout />
+                <ClientLayout />
               </ProtectedRoute>
             }>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/senders" element={<Senders />} />
-              <Route path="/senders/:email" element={<SenderDetails />} />
-              <Route path="/library" element={<Library />} />
-              <Route path="/funnels" element={<Funnels />} />
-              <Route path="/reports" element={<Reports />} />
-              <Route path="/reports/new" element={<NewReport />} />
-              <Route path="/clients" element={<Clients />} />
-              <Route path="/newsletters" element={<CapturedNewsletters />} />
-              <Route path="/analytics" element={<Analytics />} />
-              <Route path="/settings" element={<Settings />} />
-              {/* Admin SaaS Routes */}
-              <Route path="/admin/plans" element={<AdminPlans />} />
-              <Route path="/admin/payments" element={<AdminPayments />} />
-              <Route path="/admin/integrations" element={<AdminIntegrations />} />
-              <Route path="/admin/clients" element={<AdminClients />} />
-              <Route path="/admin/clients/:userId" element={<AdminClientDetails />} />
-              <Route path="/admin/metrics" element={<AdminSaasMetrics />} />
-              <Route path="/admin/alerts" element={<AdminDataLeakAlerts />} />
+              <Route index element={<Dashboard />} />
+              <Route path="senders" element={<Senders />} />
+              <Route path="senders/:email" element={<SenderDetails />} />
+              <Route path="library" element={<Library />} />
+              <Route path="newsletters" element={<CapturedNewsletters />} />
+              <Route path="analytics" element={<Analytics />} />
+              <Route path="funnels" element={<Funnels />} />
+              <Route path="reports" element={<Reports />} />
+              <Route path="reports/new" element={<NewReport />} />
+              <Route path="alerts" element={<ClientAlerts />} />
+              <Route path="settings" element={<Settings />} />
             </Route>
+
+            {/* Admin SaaS Routes - /admin/* */}
+            <Route path="/admin" element={
+              <ProtectedRoute>
+                <AdminLayout />
+              </ProtectedRoute>
+            }>
+              <Route index element={<AdminDashboard />} />
+              <Route path="metrics" element={<AdminSaasMetrics />} />
+              <Route path="clients" element={<AdminClients />} />
+              <Route path="clients/:userId" element={<AdminClientDetails />} />
+              <Route path="alerts" element={<AdminDataLeakAlerts />} />
+              <Route path="plans" element={<AdminPlans />} />
+              <Route path="payments" element={<AdminPayments />} />
+              <Route path="integrations" element={<AdminIntegrations />} />
+              <Route path="settings" element={<Settings />} />
+            </Route>
+
+            {/* 404 */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
