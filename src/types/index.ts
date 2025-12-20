@@ -211,3 +211,16 @@ export interface FilterParams {
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
 }
+
+// Remetente detectado - agregação de emails recebidos por from_email
+export interface DetectedSender {
+  fromEmail: string;
+  fromName: string | null;
+  emailCount: number;
+  lastEmailAt: string;
+  firstEmailAt: string;
+  categories: string[];
+  aliasIds: string[];
+  aliasNames: string[];
+  isUnexpected?: boolean; // Possível vazamento de dados
+}

@@ -1,24 +1,17 @@
 import { useState, useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { 
-  Plus, 
   Search, 
   Download, 
   Eye,
-  Play,
-  Pause,
-  FileText,
-  TrendingUp,
   Mail,
-  GitBranch,
   Calendar,
-  Lightbulb,
-  X,
-  BarChart3,
-  Clock
+  AlertTriangle,
+  Inbox,
+  Filter
 } from 'lucide-react';
-import { competitorService, subscriptionService, funnelService } from '@/services/api';
-import type { Sender } from '@/types';
+import { supabase } from '@/integrations/supabase/client';
+import type { DetectedSender } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -38,7 +31,6 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Select, 
   SelectContent, 
@@ -46,153 +38,182 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
-import { SenderCard } from '@/components/SenderCard';
-import { SparklineChart } from '@/components/SparklineChart';
-import { Separator } from '@/components/ui/separator';
-import { useNavigate } from 'react-router-dom';
-import { NewSenderForm } from '@/components/NewSenderForm';
+import { DetectedSenderCard } from '@/components/DetectedSenderCard';
 
-const statusColors = {
-  active: 'bg-green-500/10 text-green-700 border-green-500/20',
-  paused: 'bg-gray-500/10 text-gray-700 border-gray-500/20',
-  error: 'bg-red-500/10 text-red-700 border-red-500/20'
-};
-
-const statusLabels = {
-  active: 'Ativo',
-  paused: 'Pausado',
-  error: 'Erro'
+const categoryLabels: Record<string, string> = {
+  'promotional': 'Promocional',
+  'transactional': 'Transacional',
+  'newsletter': 'Newsletter',
+  'onboarding': 'Onboarding',
+  'notification': 'Notificação',
+  'educational': 'Educacional',
+  'unknown': 'Desconhecido'
 };
 
 export default function Senders() {
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('todos');
-  const [showNewActivity, setShowNewActivity] = useState(false);
-  const [selectedSender, setSelectedSender] = useState<Sender | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState('todas');
+  const [aliasFilter, setAliasFilter] = useState('todos');
+  const [selectedSender, setSelectedSender] = useState<DetectedSender | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  const [selectedForComparison, setSelectedForComparison] = useState<string[]>([]);
-  const [isComparisonOpen, setIsComparisonOpen] = useState(false);
-  const [isNewSenderOpen, setIsNewSenderOpen] = useState(false);
 
-  const { data: competitorsData, isLoading } = useQuery({
-    queryKey: ['competitors', search],
-    queryFn: () => competitorService.list({ search })
+  // Buscar aliases do usuário
+  const { data: aliases } = useQuery({
+    queryKey: ['email-aliases'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('email_aliases')
+        .select('id, alias, name, sender_name')
+        .order('alias');
+      
+      if (error) throw error;
+      return data || [];
+    }
   });
 
-  const { data: subscriptionsData } = useQuery({
-    queryKey: ['subscriptions', selectedSender?.id],
-    queryFn: () => selectedSender ? subscriptionService.list(selectedSender.id) : Promise.resolve([]),
-    enabled: !!selectedSender
-  });
+  // Buscar remetentes detectados a partir dos emails capturados
+  const { data: sendersData, isLoading } = useQuery({
+    queryKey: ['detected-senders', categoryFilter, aliasFilter],
+    queryFn: async () => {
+      let query = supabase
+        .from('captured_newsletters')
+        .select('from_email, from_name, category, alias_id, received_at');
 
-  const { data: funnelsData } = useQuery({
-    queryKey: ['funnels', selectedSender?.id],
-    queryFn: () => selectedSender ? funnelService.list({ competitorId: selectedSender.id }) : Promise.resolve([]),
-    enabled: !!selectedSender
-  });
+      if (categoryFilter !== 'todas') {
+        query = query.eq('category', categoryFilter);
+      }
 
-  const toggleStatusMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: 'active' | 'paused' }) => {
-      return competitorService.update(id, { 
-        status: status === 'active' ? 'paused' : 'active' 
+      if (aliasFilter !== 'todos') {
+        query = query.eq('alias_id', aliasFilter);
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      // Agregar por from_email
+      const senderMap = new Map<string, {
+        fromEmail: string;
+        fromName: string | null;
+        emailCount: number;
+        lastEmailAt: string;
+        firstEmailAt: string;
+        categories: Set<string>;
+        aliasIds: Set<string>;
+      }>();
+
+      (data || []).forEach(email => {
+        const existing = senderMap.get(email.from_email);
+        if (existing) {
+          existing.emailCount++;
+          if (email.received_at > existing.lastEmailAt) {
+            existing.lastEmailAt = email.received_at;
+          }
+          if (email.received_at < existing.firstEmailAt) {
+            existing.firstEmailAt = email.received_at;
+          }
+          if (email.category) existing.categories.add(email.category);
+          if (email.alias_id) existing.aliasIds.add(email.alias_id);
+          if (email.from_name && !existing.fromName) {
+            existing.fromName = email.from_name;
+          }
+        } else {
+          senderMap.set(email.from_email, {
+            fromEmail: email.from_email,
+            fromName: email.from_name,
+            emailCount: 1,
+            lastEmailAt: email.received_at,
+            firstEmailAt: email.received_at,
+            categories: new Set(email.category ? [email.category] : []),
+            aliasIds: new Set(email.alias_id ? [email.alias_id] : [])
+          });
+        }
       });
+
+      // Converter para array e mapear alias names
+      const aliasMap = new Map((aliases || []).map(a => [a.id, a.alias]));
+      
+      const senders: DetectedSender[] = Array.from(senderMap.values()).map(s => ({
+        fromEmail: s.fromEmail,
+        fromName: s.fromName,
+        emailCount: s.emailCount,
+        lastEmailAt: s.lastEmailAt,
+        firstEmailAt: s.firstEmailAt,
+        categories: Array.from(s.categories),
+        aliasIds: Array.from(s.aliasIds),
+        aliasNames: Array.from(s.aliasIds).map(id => aliasMap.get(id) || id),
+        isUnexpected: s.aliasIds.size > 1 // Se recebeu de mais de um alias, pode ser vazamento
+      }));
+
+      return senders.sort((a, b) => b.emailCount - a.emailCount);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['competitors'] });
-      toast({
-        title: 'Status atualizado',
-        description: 'O status do concorrente foi alterado com sucesso.'
-      });
+    enabled: !!aliases
+  });
+
+  // Buscar categorias únicas
+  const { data: categories } = useQuery({
+    queryKey: ['newsletter-categories'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('captured_newsletters')
+        .select('category')
+        .not('category', 'is', null);
+
+      if (error) throw error;
+
+      const uniqueCategories = [...new Set((data || []).map(d => d.category).filter(Boolean))];
+      return uniqueCategories as string[];
     }
   });
 
-  const exportMutation = useMutation({
-    mutationFn: async () => {
-      // Mock CSV export
-      const csv = 'Nome,Domínio,Status,E-mails 30d,Funis Ativos\n' +
-        (competitorsData || []).map(c => 
-          `${c.name},${c.mainDomain},${statusLabels[c.status]},${c.emailsLast30d},${c.activeFunnels}`
-        ).join('\n');
-      return csv;
-    },
-    onSuccess: (csv) => {
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `concorrentes-${new Date().toISOString().split('T')[0]}.csv`;
-      a.click();
-      toast({
-        title: 'Exportação concluída',
-        description: 'O arquivo CSV foi gerado com sucesso.'
-      });
-    }
-  });
+  const filteredSenders = useMemo(() => {
+    if (!sendersData) return [];
+    
+    if (!search) return sendersData;
 
-  const filteredCompetitors = useMemo(() => {
-    if (!competitorsData) return [];
-    
-    let filtered = [...competitorsData];
-    
-    if (statusFilter !== 'todos') {
-      filtered = filtered.filter(c => c.status === statusFilter);
-    }
-    
-    if (showNewActivity) {
-      filtered = filtered.filter(c => c.hasNewActivity);
-    }
-    
-    return filtered;
-  }, [competitorsData, statusFilter, showNewActivity]);
+    const searchLower = search.toLowerCase();
+    return sendersData.filter(s => 
+      s.fromEmail.toLowerCase().includes(searchLower) ||
+      (s.fromName && s.fromName.toLowerCase().includes(searchLower))
+    );
+  }, [sendersData, search]);
 
-  const topCompetitors = useMemo(() => {
-    return [...filteredCompetitors]
-      .sort((a, b) => b.emailsLast30d - a.emailsLast30d)
-      .slice(0, 3);
-  }, [filteredCompetitors]);
+  const topSenders = useMemo(() => {
+    return filteredSenders.slice(0, 3);
+  }, [filteredSenders]);
 
-  const handleViewDetails = (sender: Sender) => {
+  const handleViewDetails = (sender: DetectedSender) => {
     setSelectedSender(sender);
     setIsDetailsOpen(true);
   };
 
-  const handleToggleComparison = (competitorId: string) => {
-    setSelectedForComparison(prev => {
-      if (prev.includes(competitorId)) {
-        return prev.filter(id => id !== competitorId);
-      }
-      if (prev.length >= 3) {
-        toast({
-          title: 'Limite atingido',
-          description: 'Você pode comparar no máximo 3 concorrentes.',
-          variant: 'destructive'
-        });
-        return prev;
-      }
-      return [...prev, competitorId];
-    });
-  };
-
-  const handleCompare = () => {
-    if (selectedForComparison.length < 2) {
+  const handleExport = () => {
+    if (!filteredSenders.length) {
       toast({
-        title: 'Seleção insuficiente',
-        description: 'Selecione pelo menos 2 concorrentes para comparar.',
+        title: 'Nenhum dado para exportar',
         variant: 'destructive'
       });
       return;
     }
-    setIsComparisonOpen(true);
-  };
 
-  const comparisonCompetitors = useMemo(() => {
-    return filteredCompetitors.filter(c => selectedForComparison.includes(c.id));
-  }, [filteredCompetitors, selectedForComparison]);
+    const csv = 'Email,Nome,Emails Recebidos,Último Email,Categorias,Aliases\n' +
+      filteredSenders.map(s => 
+        `"${s.fromEmail}","${s.fromName || ''}",${s.emailCount},"${formatDate(s.lastEmailAt)}","${s.categories.join('; ')}","${s.aliasNames.join('; ')}"`
+      ).join('\n');
+    
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `remetentes-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    toast({
+      title: 'Exportação concluída',
+      description: 'O arquivo CSV foi gerado com sucesso.'
+    });
+  };
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'N/A';
@@ -205,27 +226,48 @@ export default function Senders() {
     });
   };
 
+  const suspiciousSenders = useMemo(() => {
+    return filteredSenders.filter(s => s.isUnexpected);
+  }, [filteredSenders]);
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Concorrentes</h1>
+          <h1 className="text-3xl font-bold">Remetentes Detectados</h1>
           <p className="text-muted-foreground">
-            Monitore e analise seus concorrentes
+            Remetentes identificados nos emails capturados pelos seus aliases
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => exportMutation.mutate()}>
+          <Button variant="outline" onClick={handleExport}>
             <Download className="h-4 w-4" />
             Exportar
           </Button>
-          <Button onClick={() => setIsNewSenderOpen(true)}>
-            <Plus className="h-4 w-4" />
-            Novo Remetente
-          </Button>
         </div>
       </div>
+
+      {/* Alerta de vazamento */}
+      {suspiciousSenders.length > 0 && (
+        <Card className="border-yellow-500/50 bg-yellow-500/5">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="rounded-full bg-yellow-500/10 p-2">
+                <AlertTriangle className="h-5 w-5 text-yellow-600" />
+              </div>
+              <div>
+                <p className="font-medium text-yellow-700">
+                  {suspiciousSenders.length} remetente{suspiciousSenders.length > 1 ? 's' : ''} com possível vazamento de dados
+                </p>
+                <p className="text-sm text-yellow-600/80">
+                  Estes remetentes enviaram emails para múltiplos aliases, o que pode indicar compartilhamento de dados.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Filters */}
       <Card>
@@ -234,71 +276,43 @@ export default function Senders() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Buscar concorrente por nome ou domínio..."
+                placeholder="Buscar por email ou nome do remetente..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-9"
               />
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full md:w-40">
-                <SelectValue />
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="w-full md:w-48">
+                <Filter className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Categoria" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="todos">Todos</SelectItem>
-                <SelectItem value="active">Ativos</SelectItem>
-                <SelectItem value="paused">Pausados</SelectItem>
-                <SelectItem value="error">Com Erro</SelectItem>
+                <SelectItem value="todas">Todas categorias</SelectItem>
+                {(categories || []).map(cat => (
+                  <SelectItem key={cat} value={cat}>
+                    {categoryLabels[cat] || cat}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="new-activity"
-                checked={showNewActivity}
-                onCheckedChange={(checked) => setShowNewActivity(checked as boolean)}
-              />
-              <label
-                htmlFor="new-activity"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-              >
-                Com novidades (24h)
-              </label>
-            </div>
+            <Select value={aliasFilter} onValueChange={setAliasFilter}>
+              <SelectTrigger className="w-full md:w-56">
+                <Inbox className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Alias de captura" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos aliases</SelectItem>
+                {(aliases || []).map(alias => (
+                  <SelectItem key={alias.id} value={alias.id}>
+                    {alias.alias}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </CardContent>
       </Card>
-
-      {/* Comparison Bar */}
-      {selectedForComparison.length > 0 && (
-        <Card className="border-primary">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <BarChart3 className="h-5 w-5 text-primary" />
-                <span className="font-medium">
-                  {selectedForComparison.length} concorrente{selectedForComparison.length > 1 ? 's' : ''} selecionado{selectedForComparison.length > 1 ? 's' : ''}
-                </span>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setSelectedForComparison([])}
-                >
-                  Limpar
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={handleCompare}
-                  disabled={selectedForComparison.length < 2}
-                >
-                  Comparar
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {isLoading ? (
         <div className="space-y-6">
@@ -308,41 +322,35 @@ export default function Senders() {
             ))}
           </div>
         </div>
-      ) : filteredCompetitors.length === 0 ? (
+      ) : filteredSenders.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <div className="rounded-full bg-muted p-6 mb-4">
-              <TrendingUp className="h-12 w-12 text-muted-foreground" />
+              <Mail className="h-12 w-12 text-muted-foreground" />
             </div>
             <h3 className="text-lg font-semibold mb-2">
-              Nenhum concorrente encontrado
+              Nenhum remetente detectado
             </h3>
             <p className="text-muted-foreground text-center mb-4">
-              {search || statusFilter !== 'todos' || showNewActivity
+              {search || categoryFilter !== 'todas' || aliasFilter !== 'todos'
                 ? 'Tente ajustar os filtros de busca.'
-                : 'Nenhum concorrente cadastrado. Clique em "Novo Concorrente" para começar.'}
+                : 'Quando seus aliases receberem emails, os remetentes aparecerão aqui automaticamente.'}
             </p>
-            {!search && statusFilter === 'todos' && !showNewActivity && (
-              <Button onClick={() => setIsNewSenderOpen(true)}>
-                <Plus className="h-4 w-4" />
-                Novo Remetente
-              </Button>
-            )}
           </CardContent>
         </Card>
       ) : (
         <>
-          {/* Top Competitors Cards */}
-          {topCompetitors.length > 0 && (
+          {/* Top Senders Cards */}
+          {topSenders.length > 0 && (
             <div>
               <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                <TrendingUp className="h-5 w-5" />
+                <Mail className="h-5 w-5" />
                 Mais Ativos
               </h2>
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {topCompetitors.map((sender) => (
-                  <SenderCard
-                    key={sender.id}
+                {topSenders.map((sender) => (
+                  <DetectedSenderCard
+                    key={sender.fromEmail}
                     sender={sender}
                     onViewDetails={handleViewDetails}
                   />
@@ -354,86 +362,86 @@ export default function Senders() {
           {/* Full Table */}
           <Card>
             <CardHeader>
-              <CardTitle>Todos os Concorrentes</CardTitle>
+              <CardTitle>Todos os Remetentes</CardTitle>
               <CardDescription>
-                {filteredCompetitors.length} concorrente{filteredCompetitors.length !== 1 ? 's' : ''} encontrado{filteredCompetitors.length !== 1 ? 's' : ''}
+                {filteredSenders.length} remetente{filteredSenders.length !== 1 ? 's' : ''} encontrado{filteredSenders.length !== 1 ? 's' : ''}
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-12"></TableHead>
-                    <TableHead>Concorrente</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Funis</TableHead>
-                    <TableHead className="text-right">E-mails 30d</TableHead>
-                    <TableHead>Último envio</TableHead>
-                    <TableHead className="text-right">Intervalo (h)</TableHead>
+                    <TableHead>Remetente</TableHead>
+                    <TableHead>Categorias</TableHead>
+                    <TableHead className="text-right">Emails</TableHead>
+                    <TableHead>Aliases</TableHead>
+                    <TableHead>Último email</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredCompetitors.map((competitor) => (
-                    <TableRow key={competitor.id}>
-                      <TableCell>
-                        <Checkbox
-                          checked={selectedForComparison.includes(competitor.id)}
-                          onCheckedChange={() => handleToggleComparison(competitor.id)}
-                        />
-                      </TableCell>
+                  {filteredSenders.map((sender) => (
+                    <TableRow key={sender.fromEmail}>
                       <TableCell>
                         <div className="flex flex-col">
                           <div className="flex items-center gap-2">
-                            <span className="font-medium">{competitor.name}</span>
-                            {competitor.hasNewActivity && (
-                              <Badge variant="outline" className="bg-blue-500/10 text-blue-700 border-blue-500/20 text-xs">
-                                Novo
+                            <span className="font-medium">{sender.fromName || sender.fromEmail}</span>
+                            {sender.isUnexpected && (
+                              <Badge variant="outline" className="bg-yellow-500/10 text-yellow-700 border-yellow-500/20 text-xs">
+                                <AlertTriangle className="h-3 w-3 mr-1" />
+                                Suspeito
                               </Badge>
                             )}
                           </div>
-                          <span className="text-xs text-muted-foreground">
-                            {competitor.mainDomain}
-                          </span>
+                          {sender.fromName && (
+                            <span className="text-xs text-muted-foreground">
+                              {sender.fromEmail}
+                            </span>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className={statusColors[competitor.status]}>
-                          {statusLabels[competitor.status]}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">{competitor.activeFunnels}</TableCell>
-                      <TableCell className="text-right">{competitor.emailsLast30d}</TableCell>
-                      <TableCell className="text-sm">
-                        {formatDate(competitor.lastEmailAt)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {competitor.avgIntervalHours || 0}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleViewDetails(competitor)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => toggleStatusMutation.mutate({
-                              id: competitor.id,
-                              status: competitor.status as 'active' | 'paused'
-                            })}
-                          >
-                            {competitor.status === 'active' ? (
-                              <Pause className="h-4 w-4" />
-                            ) : (
-                              <Play className="h-4 w-4" />
-                            )}
-                          </Button>
+                        <div className="flex flex-wrap gap-1">
+                          {sender.categories.slice(0, 2).map(cat => (
+                            <Badge key={cat} variant="secondary" className="text-xs">
+                              {categoryLabels[cat] || cat}
+                            </Badge>
+                          ))}
+                          {sender.categories.length > 2 && (
+                            <Badge variant="outline" className="text-xs">
+                              +{sender.categories.length - 2}
+                            </Badge>
+                          )}
                         </div>
+                      </TableCell>
+                      <TableCell className="text-right font-medium">
+                        {sender.emailCount}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {sender.aliasNames.slice(0, 2).map(alias => (
+                            <Badge key={alias} variant="outline" className="text-xs">
+                              {alias}
+                            </Badge>
+                          ))}
+                          {sender.aliasNames.length > 2 && (
+                            <Badge variant="outline" className="text-xs">
+                              +{sender.aliasNames.length - 2}
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {formatDate(sender.lastEmailAt)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleViewDetails(sender)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -446,315 +454,117 @@ export default function Senders() {
 
       {/* Details Sheet */}
       <Sheet open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-        <SheetContent className="w-full sm:max-w-3xl overflow-y-auto">
+        <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
           {selectedSender && (
             <>
               <SheetHeader>
                 <div className="flex items-center gap-4 mb-4">
                   <div className="h-16 w-16 rounded-lg bg-primary/10 flex items-center justify-center">
                     <span className="text-2xl font-bold text-primary">
-                      {selectedSender.name.charAt(0)}
+                      {(selectedSender.fromName || selectedSender.fromEmail).charAt(0).toUpperCase()}
                     </span>
                   </div>
                   <div className="flex-1">
-                    <SheetTitle className="text-2xl">{selectedSender.name}</SheetTitle>
-                    <SheetDescription>{selectedSender.mainDomain}</SheetDescription>
+                    <SheetTitle className="text-xl">
+                      {selectedSender.fromName || selectedSender.fromEmail}
+                    </SheetTitle>
+                    <SheetDescription>{selectedSender.fromEmail}</SheetDescription>
                   </div>
-                  <Badge variant="outline" className={statusColors[selectedSender.status]}>
-                    {statusLabels[selectedSender.status]}
-                  </Badge>
+                  {selectedSender.isUnexpected && (
+                    <Badge variant="outline" className="bg-yellow-500/10 text-yellow-700 border-yellow-500/20">
+                      <AlertTriangle className="h-3 w-3 mr-1" />
+                      Suspeito
+                    </Badge>
+                  )}
                 </div>
               </SheetHeader>
 
-              <Tabs defaultValue="resumo" className="mt-6">
-                <TabsList className="grid w-full grid-cols-4">
-                  <TabsTrigger value="resumo">Resumo</TabsTrigger>
-                  <TabsTrigger value="funis">Funis</TabsTrigger>
-                  <TabsTrigger value="seeds">Seeds</TabsTrigger>
-                  <TabsTrigger value="insights">Insights</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="resumo" className="space-y-4">
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <Card>
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-sm font-medium flex items-center gap-2">
-                          <Mail className="h-4 w-4" />
-                          E-mails (30 dias)
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-3xl font-bold">{selectedSender.emailsLast30d}</p>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-sm font-medium flex items-center gap-2">
-                          <GitBranch className="h-4 w-4" />
-                          Funis Ativos
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-3xl font-bold">{selectedSender.activeFunnels}</p>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-sm font-medium flex items-center gap-2">
-                          <Clock className="h-4 w-4" />
-                          Intervalo Médio
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-3xl font-bold">{selectedSender.avgIntervalHours || 0}h</p>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-sm font-medium flex items-center gap-2">
-                          <Calendar className="h-4 w-4" />
-                          Último Envio
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-lg font-medium">
-                          {formatDate(selectedSender.lastEmailAt)}
-                        </p>
-                      </CardContent>
-                    </Card>
-                  </div>
-
-                  {selectedSender.sparklineData && (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="text-sm">Atividade dos últimos 30 dias</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <SparklineChart data={selectedSender.sparklineData} className="h-16" />
-                      </CardContent>
-                    </Card>
-                  )}
-
-                  <div className="flex gap-2">
-                    <Button variant="outline" className="flex-1">
-                      <FileText className="h-4 w-4" />
-                      Exportar E-mails
-                    </Button>
-                    <Button variant="outline" className="flex-1">
-                      <Plus className="h-4 w-4" />
-                      Nova Inscrição
-                    </Button>
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="funis" className="space-y-4">
-                  {funnelsData && funnelsData.length > 0 ? (
-                    funnelsData.map((funnel) => (
-                      <Card key={funnel.id}>
-                        <CardHeader>
-                          <CardTitle className="text-base">{funnel.name}</CardTitle>
-                          <CardDescription>
-                            {funnel.emailIds.length} e-mails • Gap médio: {funnel.cadenceSummary.avgGap}h
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-muted-foreground">
-                              {new Date(funnel.startDate).toLocaleDateString('pt-BR')}
-                              {funnel.endDate && ` - ${new Date(funnel.endDate).toLocaleDateString('pt-BR')}`}
-                            </span>
-                            <Button variant="ghost" size="sm">
-                              Ver funil completo
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))
-                  ) : (
-                    <div className="text-center py-8 text-muted-foreground">
-                      Nenhum funil detectado ainda
-                    </div>
-                  )}
-                </TabsContent>
-
-                <TabsContent value="seeds" className="space-y-4">
-                  {subscriptionsData && subscriptionsData.length > 0 ? (
-                    subscriptionsData.map((subscription) => (
-                      <Card key={subscription.id}>
-                        <CardHeader>
-                          <CardTitle className="text-sm">Seed: {subscription.seedId}</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-2">
-                          <div>
-                            <span className="text-sm font-medium">URL de Captura:</span>
-                            <p className="text-sm text-muted-foreground break-all">
-                              {subscription.captureUrl}
-                            </p>
-                          </div>
-                          {subscription.labels.length > 0 && (
-                            <div className="flex flex-wrap gap-1">
-                              {subscription.labels.map((label, i) => (
-                                <Badge key={i} variant="secondary" className="text-xs">
-                                  {label}
-                                </Badge>
-                              ))}
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    ))
-                  ) : (
-                    <div className="text-center py-8 text-muted-foreground">
-                      Nenhuma inscrição configurada
-                    </div>
-                  )}
-                </TabsContent>
-
-                <TabsContent value="insights" className="space-y-4">
-                  {selectedSender.insights && selectedSender.insights.length > 0 ? (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="text-base flex items-center gap-2">
-                          <Lightbulb className="h-5 w-5 text-yellow-500" />
-                          Insights IA
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <ul className="space-y-3">
-                          {selectedSender.insights.map((insight, i) => (
-                            <li key={i} className="flex gap-3">
-                              <span className="text-primary font-bold">•</span>
-                              <span className="text-sm">{insight}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </CardContent>
-                    </Card>
-                  ) : (
-                    <div className="text-center py-8 text-muted-foreground">
-                      Nenhum insight disponível ainda
-                    </div>
-                  )}
-                </TabsContent>
-              </Tabs>
-            </>
-          )}
-        </SheetContent>
-      </Sheet>
-
-      {/* Comparison Dialog */}
-      <Sheet open={isComparisonOpen} onOpenChange={setIsComparisonOpen}>
-        <SheetContent className="w-full sm:max-w-4xl overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle className="flex items-center justify-between">
-              <span>Comparação de Concorrentes</span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsComparisonOpen(false)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </SheetTitle>
-            <SheetDescription>
-              Comparando {comparisonCompetitors.length} concorrentes
-            </SheetDescription>
-          </SheetHeader>
-
-          <div className="mt-6 space-y-6">
-            {/* Comparison Grid */}
-            <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${comparisonCompetitors.length}, 1fr)` }}>
-              {comparisonCompetitors.map((competitor) => (
-                <Card key={competitor.id}>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm">{competitor.name}</CardTitle>
-                    <CardDescription className="text-xs">{competitor.mainDomain}</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">E-mails 30d</p>
-                      <p className="text-2xl font-bold">{competitor.emailsLast30d}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">Funis Ativos</p>
-                      <p className="text-2xl font-bold">{competitor.activeFunnels}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">Intervalo Médio</p>
-                      <p className="text-2xl font-bold">{competitor.avgIntervalHours || 0}h</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">Status</p>
-                      <Badge variant="outline" className={statusColors[competitor.status]}>
-                        {statusLabels[competitor.status]}
-                      </Badge>
-                    </div>
-                    {competitor.sparklineData && (
-                      <div>
-                        <p className="text-xs text-muted-foreground mb-2">Atividade</p>
-                        <SparklineChart data={competitor.sparklineData} />
+              <div className="space-y-6 mt-6">
+                {/* Stats */}
+                <div className="grid grid-cols-2 gap-4">
+                  <Card>
+                    <CardContent className="pt-4">
+                      <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                        <Mail className="h-4 w-4" />
+                        <span className="text-sm">Emails Recebidos</span>
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-
-            <Separator />
-
-            {/* Insights Comparison */}
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Insights Comparativos</h3>
-              <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${comparisonCompetitors.length}, 1fr)` }}>
-                {comparisonCompetitors.map((competitor) => (
-                  <Card key={`insights-${competitor.id}`}>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm">{competitor.name}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      {competitor.insights && competitor.insights.length > 0 ? (
-                        <ul className="space-y-2">
-                          {competitor.insights.slice(0, 3).map((insight, i) => (
-                            <li key={i} className="text-xs flex gap-2">
-                              <span className="text-primary">•</span>
-                              <span>{insight}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <p className="text-xs text-muted-foreground">Sem insights</p>
-                      )}
+                      <p className="text-3xl font-bold">{selectedSender.emailCount}</p>
                     </CardContent>
                   </Card>
-                ))}
-              </div>
-            </div>
-          </div>
-        </SheetContent>
-      </Sheet>
+                  <Card>
+                    <CardContent className="pt-4">
+                      <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                        <Inbox className="h-4 w-4" />
+                        <span className="text-sm">Aliases</span>
+                      </div>
+                      <p className="text-3xl font-bold">{selectedSender.aliasIds.length}</p>
+                    </CardContent>
+                  </Card>
+                </div>
 
-      {/* New Competitor Sheet */}
-      <Sheet open={isNewSenderOpen} onOpenChange={setIsNewSenderOpen}>
-        <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>Novo Remetente</SheetTitle>
-            <SheetDescription>
-              Preencha os dados para iniciar o monitoramento de um novo remetente
-            </SheetDescription>
-          </SheetHeader>
-          <div className="mt-6">
-            <NewSenderForm 
-              onSubmit={(data) => {
-                toast({
-                  title: 'Remetente cadastrado!',
-                  description: `${data.name} foi adicionado com sucesso.`,
-                });
-                setIsNewSenderOpen(false);
-                queryClient.invalidateQueries({ queryKey: ['competitors'] });
-              }}
-              onCancel={() => setIsNewSenderOpen(false)}
-            />
-          </div>
+                {/* Datas */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      Período de Atividade
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Primeiro email:</span>
+                      <span className="font-medium">{formatDate(selectedSender.firstEmailAt)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Último email:</span>
+                      <span className="font-medium">{formatDate(selectedSender.lastEmailAt)}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Categorias */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">Categorias</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedSender.categories.length > 0 ? (
+                        selectedSender.categories.map(cat => (
+                          <Badge key={cat} variant="secondary">
+                            {categoryLabels[cat] || cat}
+                          </Badge>
+                        ))
+                      ) : (
+                        <span className="text-muted-foreground text-sm">Nenhuma categoria</span>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Aliases que receberam */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">Aliases que Receberam</CardTitle>
+                    {selectedSender.isUnexpected && (
+                      <CardDescription className="text-yellow-600">
+                        Este remetente enviou emails para múltiplos aliases
+                      </CardDescription>
+                    )}
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedSender.aliasNames.map(alias => (
+                        <Badge key={alias} variant="outline">
+                          {alias}
+                        </Badge>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </>
+          )}
         </SheetContent>
       </Sheet>
     </div>
