@@ -43,7 +43,7 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { toast } from '@/hooks/use-toast';
 
-const competitorFormSchema = z.object({
+const senderFormSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres').max(100, 'Nome muito longo'),
   website: z.string().url('URL inválida').max(255, 'URL muito longa'),
   mainDomain: z.string().min(3, 'Domínio deve ter pelo menos 3 caracteres').max(100, 'Domínio muito longo'),
@@ -56,10 +56,10 @@ const competitorFormSchema = z.object({
   priority: z.string().default('medium'),
 });
 
-type CompetitorFormData = z.infer<typeof competitorFormSchema>;
+type SenderFormData = z.infer<typeof senderFormSchema>;
 
-interface NewCompetitorFormProps {
-  onSubmit?: (data: CompetitorFormData) => void;
+interface NewSenderFormProps {
+  onSubmit?: (data: SenderFormData) => void;
   onCancel?: () => void;
   isLoading?: boolean;
 }
@@ -91,12 +91,12 @@ const frequencies = [
   { value: 'weekly', label: 'Semanal' },
 ];
 
-export function NewCompetitorForm({ onSubmit, onCancel, isLoading = false }: NewCompetitorFormProps) {
+export function NewSenderForm({ onSubmit, onCancel, isLoading = false }: NewSenderFormProps) {
   const [labels, setLabels] = useState<string[]>([]);
   const [labelInput, setLabelInput] = useState('');
 
-  const form = useForm<CompetitorFormData>({
-    resolver: zodResolver(competitorFormSchema),
+  const form = useForm<SenderFormData>({
+    resolver: zodResolver(senderFormSchema),
     defaultValues: {
       name: '',
       website: '',
@@ -142,12 +142,12 @@ export function NewCompetitorForm({ onSubmit, onCancel, isLoading = false }: New
     }
   };
 
-  const handleFormSubmit = (data: CompetitorFormData) => {
+  const handleFormSubmit = (data: SenderFormData) => {
     if (onSubmit) {
       onSubmit(data);
     } else {
       toast({
-        title: 'Concorrente criado!',
+        title: 'Remetente criado!',
         description: `${data.name} foi adicionado com sucesso.`,
       });
     }
@@ -164,7 +164,7 @@ export function NewCompetitorForm({ onSubmit, onCancel, isLoading = false }: New
               Informações Básicas
             </CardTitle>
             <CardDescription>
-              Dados principais do concorrente a ser monitorado
+              Dados principais do remetente a ser monitorado
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -174,7 +174,7 @@ export function NewCompetitorForm({ onSubmit, onCancel, isLoading = false }: New
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Nome do Concorrente *</FormLabel>
+                    <FormLabel>Nome do Remetente *</FormLabel>
                     <FormControl>
                       <Input placeholder="Ex: Empresa XYZ" {...field} />
                     </FormControl>
@@ -479,7 +479,7 @@ export function NewCompetitorForm({ onSubmit, onCancel, isLoading = false }: New
             ) : (
               <>
                 <CheckCircle2 className="h-4 w-4" />
-                Cadastrar Concorrente
+                Cadastrar Remetente
               </>
             )}
           </Button>

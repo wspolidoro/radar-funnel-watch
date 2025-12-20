@@ -23,7 +23,7 @@ import {
 
 const menuItems = [
   { title: 'Dashboard', url: '/', icon: LayoutDashboard },
-  { title: 'Concorrentes', url: '/competitors', icon: Users },
+  { title: 'Remetentes', url: '/senders', icon: Users },
   { title: 'Biblioteca', url: '/library', icon: Library },
   { title: 'Newsletters', url: '/newsletters', icon: Inbox },
   { title: 'Funis', url: '/funnels', icon: GitBranch },

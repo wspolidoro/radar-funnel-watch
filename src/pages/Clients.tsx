@@ -479,11 +479,11 @@ export default function Clients() {
                       <CardHeader className="pb-3">
                         <CardTitle className="text-sm font-medium flex items-center gap-2">
                           <TrendingUp className="h-4 w-4" />
-                          Concorrentes Monitorados
+                          Remetentes Monitorados
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <p className="text-3xl font-bold">{selectedClient.uso.concorrentes}</p>
+                        <p className="text-3xl font-bold">{selectedClient.uso.remetentes}</p>
                       </CardContent>
                     </Card>
                     <Card>

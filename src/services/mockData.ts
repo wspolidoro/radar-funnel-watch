@@ -152,18 +152,20 @@ export const mockSeeds: SeedInbox[] = [
 export const mockSubscriptions: Subscription[] = [
   {
     id: 'sub-1',
+    senderId: 'comp-1',
     competitorId: 'comp-1',
     seedId: 'seed-1',
-    captureUrl: 'https://concorrentea.com/newsletter',
+    captureUrl: 'https://remetentea.com/newsletter',
     labels: ['onboarding', 'promo'],
     status: 'active',
     createdAt: '2024-01-15T10:30:00Z'
   },
   {
     id: 'sub-2',
+    senderId: 'comp-2',
     competitorId: 'comp-2',
     seedId: 'seed-1',
-    captureUrl: 'https://concorrenteb.com/signup',
+    captureUrl: 'https://remetenteb.com/signup',
     labels: ['educacao'],
     status: 'active',
     createdAt: '2024-02-01T09:15:00Z'
@@ -732,7 +734,7 @@ export const mockReports: Report[] = [
 ];
 
 export const mockDashboardKPIs: DashboardKPIs = {
-  competitorsMonitored: 3,
+  sendersMonitored: 3,
   newEmailsLast7d: 12,
   funnelsDetected: 5,
   avgIntervalHours: 42
@@ -750,7 +752,7 @@ export const mockClients: Client[] = [
     status: 'ativo',
     criadoEm: '2024-01-10T10:00:00Z',
     uso: {
-      concorrentes: 5,
+      remetentes: 5,
       emails: 230,
       relatorios: 8
     },
@@ -771,7 +773,7 @@ export const mockClients: Client[] = [
     status: 'ativo',
     criadoEm: '2024-02-15T14:30:00Z',
     uso: {
-      concorrentes: 2,
+      remetentes: 2,
       emails: 85,
       relatorios: 3
     },
@@ -791,7 +793,7 @@ export const mockClients: Client[] = [
     status: 'ativo',
     criadoEm: '2023-11-20T09:00:00Z',
     uso: {
-      concorrentes: 15,
+      remetentes: 15,
       emails: 1250,
       relatorios: 24
     },
@@ -811,7 +813,7 @@ export const mockClients: Client[] = [
     status: 'teste',
     criadoEm: '2024-03-01T11:00:00Z',
     uso: {
-      concorrentes: 3,
+      remetentes: 3,
       emails: 45,
       relatorios: 1
     },
@@ -828,7 +830,7 @@ export const mockClients: Client[] = [
     status: 'inativo',
     criadoEm: '2023-08-10T08:00:00Z',
     uso: {
-      concorrentes: 8,
+      remetentes: 8,
       emails: 650,
       relatorios: 15
     },

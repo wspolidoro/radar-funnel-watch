@@ -6,7 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import Dashboard from "./pages/Dashboard";
-import Competitors from "./pages/Competitors";
+import Senders from "./pages/Senders";
 import Library from "./pages/Library";
 import Funnels from "./pages/Funnels";
 import Reports from "./pages/Reports";
@@ -55,7 +55,7 @@ const App = () => (
               </ProtectedRoute>
             }>
               <Route path="/" element={<Dashboard />} />
-              <Route path="/competitors" element={<Competitors />} />
+              <Route path="/senders" element={<Senders />} />
               <Route path="/library" element={<Library />} />
               <Route path="/funnels" element={<Funnels />} />
               <Route path="/reports" element={<Reports />} />
