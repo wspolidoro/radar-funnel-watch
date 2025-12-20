@@ -16,48 +16,85 @@ export type Database = {
     Tables: {
       captured_newsletters: {
         Row: {
+          alias_id: string | null
+          analyzed_at: string | null
           category: string | null
           competitor_id: string | null
+          confirmation_link: string | null
           created_at: string
+          ctas: Json | null
+          email_type: string | null
           from_email: string
           from_name: string | null
+          has_images: boolean | null
           html_content: string | null
           id: string
           is_processed: boolean | null
+          links_count: number | null
+          optin_status: string | null
           received_at: string
           seed_id: string
+          sentiment: string | null
           subject: string
           text_content: string | null
+          word_count: number | null
         }
         Insert: {
+          alias_id?: string | null
+          analyzed_at?: string | null
           category?: string | null
           competitor_id?: string | null
+          confirmation_link?: string | null
           created_at?: string
+          ctas?: Json | null
+          email_type?: string | null
           from_email: string
           from_name?: string | null
+          has_images?: boolean | null
           html_content?: string | null
           id?: string
           is_processed?: boolean | null
+          links_count?: number | null
+          optin_status?: string | null
           received_at: string
           seed_id: string
+          sentiment?: string | null
           subject: string
           text_content?: string | null
+          word_count?: number | null
         }
         Update: {
+          alias_id?: string | null
+          analyzed_at?: string | null
           category?: string | null
           competitor_id?: string | null
+          confirmation_link?: string | null
           created_at?: string
+          ctas?: Json | null
+          email_type?: string | null
           from_email?: string
           from_name?: string | null
+          has_images?: boolean | null
           html_content?: string | null
           id?: string
           is_processed?: boolean | null
+          links_count?: number | null
+          optin_status?: string | null
           received_at?: string
           seed_id?: string
+          sentiment?: string | null
           subject?: string
           text_content?: string | null
+          word_count?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "captured_newsletters_alias_id_fkey"
+            columns: ["alias_id"]
+            isOneToOne: false
+            referencedRelation: "email_aliases"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "captured_newsletters_seed_id_fkey"
             columns: ["seed_id"]
@@ -66,6 +103,120 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      chat_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          metadata: Json | null
+          role: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          role: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          role?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      email_aliases: {
+        Row: {
+          alias: string
+          created_at: string
+          description: string | null
+          domain: string
+          email_count: number | null
+          first_email_at: string | null
+          id: string
+          is_confirmed: boolean | null
+          local_part: string
+          name: string | null
+          sender_category: string | null
+          sender_name: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          alias: string
+          created_at?: string
+          description?: string | null
+          domain: string
+          email_count?: number | null
+          first_email_at?: string | null
+          id?: string
+          is_confirmed?: boolean | null
+          local_part: string
+          name?: string | null
+          sender_category?: string | null
+          sender_name?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          alias?: string
+          created_at?: string
+          description?: string | null
+          domain?: string
+          email_count?: number | null
+          first_email_at?: string | null
+          id?: string
+          is_confirmed?: boolean | null
+          local_part?: string
+          name?: string | null
+          sender_category?: string | null
+          sender_name?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      email_domains: {
+        Row: {
+          created_at: string
+          domain: string
+          id: string
+          is_active: boolean | null
+          is_verified: boolean | null
+          provider: string
+          updated_at: string
+          user_id: string
+          webhook_secret: string | null
+        }
+        Insert: {
+          created_at?: string
+          domain: string
+          id?: string
+          is_active?: boolean | null
+          is_verified?: boolean | null
+          provider?: string
+          updated_at?: string
+          user_id: string
+          webhook_secret?: string | null
+        }
+        Update: {
+          created_at?: string
+          domain?: string
+          id?: string
+          is_active?: boolean | null
+          is_verified?: boolean | null
+          provider?: string
+          updated_at?: string
+          user_id?: string
+          webhook_secret?: string | null
+        }
+        Relationships: []
       }
       email_seeds: {
         Row: {

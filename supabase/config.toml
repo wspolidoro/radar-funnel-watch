@@ -8,3 +8,12 @@ verify_jwt = false
 
 [functions.categorize-newsletter]
 verify_jwt = true
+
+[functions.receive-email]
+verify_jwt = false
+
+[functions.analyze-newsletter]
+verify_jwt = true
+
+[functions.chat-insights]
+verify_jwt = true
