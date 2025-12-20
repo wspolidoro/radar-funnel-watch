@@ -14,6 +14,7 @@ import Settings from "./pages/Settings";
 import Clients from "./pages/Clients";
 import Onboarding from "./pages/Onboarding";
 import Login from "./pages/Login";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import CapturedNewsletters from "./pages/CapturedNewsletters";
 
@@ -42,6 +43,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/onboarding" element={
               <ProtectedRoute>
                 <Onboarding />
