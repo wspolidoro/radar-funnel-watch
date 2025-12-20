@@ -174,19 +174,21 @@ const Library = () => {
   // Convert newsletter to Email type for viewer
   const convertToEmail = (newsletter: CapturedNewsletter): Email => ({
     id: newsletter.id,
+    competitorId: '',
+    subscriptionId: '',
+    sentAt: newsletter.received_at,
     from: newsletter.from_name 
       ? `${newsletter.from_name} <${newsletter.from_email}>`
       : newsletter.from_email,
     subject: newsletter.subject,
+    preheader: '',
+    textBody: newsletter.text_content || '',
     htmlContent: newsletter.html_content || '',
-    textContent: newsletter.text_content || '',
-    receivedAt: newsletter.received_at,
-    category: (newsletter.category || 'newsletter') as Email['category'],
-    ctas: Array.isArray(newsletter.ctas) ? newsletter.ctas : [],
-    isAbVariant: false,
-    competitorId: '',
+    category: (newsletter.category || 'onboarding') as Email['category'],
     topics: [],
-    sentimentScore: 0,
+    ctas: Array.isArray(newsletter.ctas) ? newsletter.ctas : [],
+    links: [],
+    isAbVariant: false,
   });
 
   const getCategoryBadge = (category: string | null) => {
