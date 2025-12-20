@@ -1,4 +1,4 @@
-import { Bell, Plus } from 'lucide-react';
+import { Bell, Plus, FileText, Radar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -40,10 +40,12 @@ export const AppNavbar = () => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => navigate('/reports/new')}>
+              <DropdownMenuItem onClick={() => navigate('/app/reports/new')}>
+                <FileText className="h-4 w-4 mr-2" />
                 Novo Relatório
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate('/tracking/new')}>
+              <DropdownMenuItem onClick={() => navigate('/app/tracking/new')}>
+                <Radar className="h-4 w-4 mr-2" />
                 Novo Acompanhamento
               </DropdownMenuItem>
             </DropdownMenuContent>
