@@ -2,8 +2,12 @@ import { Outlet } from 'react-router-dom';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { AppNavbar } from './AppNavbar';
 import { AppSidebar } from './AppSidebar';
+import { useDataLeakNotifications } from '@/hooks/useDataLeakNotifications';
 
 export const AppLayout = () => {
+  // Enable real-time data leak notifications
+  useDataLeakNotifications();
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background">
