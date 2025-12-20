@@ -16,6 +16,7 @@ import { ExportNewslettersButton } from '@/components/ExportNewslettersButton';
 import { OptinConfirmation } from '@/components/OptinConfirmation';
 import { ExportHTMLButton } from '@/components/ExportHTMLButton';
 import { TrackingCreator } from '@/components/TrackingCreator';
+import { TrackingList } from '@/components/TrackingList';
 
 interface CapturedNewsletter {
   id: string;
@@ -234,8 +235,11 @@ const CapturedNewsletters = () => {
         </div>
       </div>
 
-      {/* Tracking Creator - Simplified */}
-      <TrackingCreator onTrackingCreated={() => refetch()} />
+      {/* Tracking Section - Two columns on desktop */}
+      <div className="grid md:grid-cols-2 gap-6">
+        <TrackingCreator onTrackingCreated={() => refetch()} />
+        <TrackingList />
+      </div>
 
       {/* Realtime indicator */}
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
