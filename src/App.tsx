@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import Dashboard from "./pages/Dashboard";
 import Senders from "./pages/Senders";
+import SenderDetails from "./pages/SenderDetails";
 import Library from "./pages/Library";
 import Funnels from "./pages/Funnels";
 import Reports from "./pages/Reports";
@@ -18,6 +19,9 @@ import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import CapturedNewsletters from "./pages/CapturedNewsletters";
 import Analytics from "./pages/Analytics";
+import AdminPlans from "./pages/admin/Plans";
+import AdminPayments from "./pages/admin/Payments";
+import AdminIntegrations from "./pages/admin/Integrations";
 
 const queryClient = new QueryClient();
 
@@ -57,6 +61,7 @@ const App = () => (
             }>
               <Route path="/" element={<Dashboard />} />
               <Route path="/senders" element={<Senders />} />
+              <Route path="/senders/:email" element={<SenderDetails />} />
               <Route path="/library" element={<Library />} />
               <Route path="/funnels" element={<Funnels />} />
               <Route path="/reports" element={<Reports />} />
@@ -64,6 +69,10 @@ const App = () => (
               <Route path="/newsletters" element={<CapturedNewsletters />} />
               <Route path="/analytics" element={<Analytics />} />
               <Route path="/settings" element={<Settings />} />
+              {/* Admin SaaS Routes */}
+              <Route path="/admin/plans" element={<AdminPlans />} />
+              <Route path="/admin/payments" element={<AdminPayments />} />
+              <Route path="/admin/integrations" element={<AdminIntegrations />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
