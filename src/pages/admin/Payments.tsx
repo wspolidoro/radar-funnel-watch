@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { 
   CreditCard, 
   Download,
@@ -8,7 +9,9 @@ import {
   Clock,
   TrendingUp,
   DollarSign,
-  Calendar
+  Calendar,
+  Loader2,
+  RefreshCw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,119 +32,102 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Payment {
   id: string;
-  clientName: string;
-  clientEmail: string;
+  user_id: string;
   amount: number;
-  status: 'paid' | 'pending' | 'failed' | 'refunded';
-  plan: string;
-  createdAt: string;
-  paidAt?: string;
-  method: 'credit_card' | 'pix' | 'boleto';
+  currency: string;
+  status: string;
+  payment_method: string | null;
+  payment_provider: string | null;
+  paid_at: string | null;
+  created_at: string;
+  user_email?: string;
+  user_name?: string;
+  plan_name?: string;
 }
 
-const mockPayments: Payment[] = [
-  {
-    id: 'pay_1',
-    clientName: 'Tech Solutions Ltda',
-    clientEmail: 'financeiro@techsolutions.com',
-    amount: 149,
-    status: 'paid',
-    plan: 'Pro',
-    createdAt: '2024-01-15T10:30:00Z',
-    paidAt: '2024-01-15T10:32:00Z',
-    method: 'credit_card'
-  },
-  {
-    id: 'pay_2',
-    clientName: 'Marketing Digital SA',
-    clientEmail: 'pagamentos@marketingdigital.com',
-    amount: 499,
-    status: 'paid',
-    plan: 'Enterprise',
-    createdAt: '2024-01-14T14:20:00Z',
-    paidAt: '2024-01-14T14:22:00Z',
-    method: 'pix'
-  },
-  {
-    id: 'pay_3',
-    clientName: 'Startup XYZ',
-    clientEmail: 'admin@startupxyz.io',
-    amount: 49,
-    status: 'pending',
-    plan: 'Basic',
-    createdAt: '2024-01-16T09:00:00Z',
-    method: 'boleto'
-  },
-  {
-    id: 'pay_4',
-    clientName: 'E-commerce Brasil',
-    clientEmail: 'finance@ecommercebr.com',
-    amount: 149,
-    status: 'failed',
-    plan: 'Pro',
-    createdAt: '2024-01-13T16:45:00Z',
-    method: 'credit_card'
-  },
-  {
-    id: 'pay_5',
-    clientName: 'Agência Criativa',
-    clientEmail: 'contato@agenciacriativa.com',
-    amount: 49,
-    status: 'refunded',
-    plan: 'Basic',
-    createdAt: '2024-01-10T11:00:00Z',
-    paidAt: '2024-01-10T11:02:00Z',
-    method: 'credit_card'
-  }
-];
-
-const statusConfig = {
-  paid: { label: 'Pago', color: 'bg-green-500/10 text-green-700 border-green-500/20', icon: CheckCircle },
+const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
+  completed: { label: 'Pago', color: 'bg-green-500/10 text-green-700 border-green-500/20', icon: CheckCircle },
   pending: { label: 'Pendente', color: 'bg-yellow-500/10 text-yellow-700 border-yellow-500/20', icon: Clock },
   failed: { label: 'Falhou', color: 'bg-red-500/10 text-red-700 border-red-500/20', icon: XCircle },
-  refunded: { label: 'Reembolsado', color: 'bg-gray-500/10 text-gray-700 border-gray-500/20', icon: XCircle }
+  refunded: { label: 'Reembolsado', color: 'bg-gray-500/10 text-gray-700 border-gray-500/20', icon: RefreshCw }
 };
 
-const methodLabels = {
+const methodLabels: Record<string, string> = {
   credit_card: 'Cartão de Crédito',
   pix: 'PIX',
-  boleto: 'Boleto'
+  boleto: 'Boleto',
+  stripe: 'Stripe'
 };
 
 export default function AdminPayments() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('todos');
-  const [periodFilter, setPeriodFilter] = useState('30d');
 
-  const filteredPayments = mockPayments.filter(payment => {
+  const { data: payments = [], isLoading } = useQuery({
+    queryKey: ['admin-payments'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('saas_payments')
+        .select(`
+          *,
+          saas_subscriptions (
+            user_id,
+            saas_plans (
+              name
+            )
+          )
+        `)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+
+      // Get user emails from profiles
+      const userIds = [...new Set(data?.map(p => p.user_id) || [])];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, full_name')
+        .in('user_id', userIds);
+
+      const profileMap = new Map(profiles?.map(p => [p.user_id, p.full_name]) || []);
+
+      return (data || []).map(p => ({
+        ...p,
+        user_name: profileMap.get(p.user_id) || 'Usuário',
+        plan_name: (p.saas_subscriptions as any)?.saas_plans?.name || '-'
+      })) as Payment[];
+    }
+  });
+
+  const filteredPayments = payments.filter(payment => {
     const matchesSearch = 
-      payment.clientName.toLowerCase().includes(search.toLowerCase()) ||
-      payment.clientEmail.toLowerCase().includes(search.toLowerCase());
+      payment.user_name?.toLowerCase().includes(search.toLowerCase()) ||
+      payment.id.toLowerCase().includes(search.toLowerCase());
     const matchesStatus = statusFilter === 'todos' || payment.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
   const stats = {
-    totalRevenue: mockPayments
-      .filter(p => p.status === 'paid')
-      .reduce((acc, p) => acc + p.amount, 0),
-    pendingAmount: mockPayments
+    totalRevenue: payments
+      .filter(p => p.status === 'completed')
+      .reduce((acc, p) => acc + Number(p.amount), 0),
+    pendingAmount: payments
       .filter(p => p.status === 'pending')
-      .reduce((acc, p) => acc + p.amount, 0),
-    transactionsCount: mockPayments.length,
-    successRate: Math.round(
-      (mockPayments.filter(p => p.status === 'paid').length / mockPayments.length) * 100
-    )
+      .reduce((acc, p) => acc + Number(p.amount), 0),
+    transactionsCount: payments.length,
+    successRate: payments.length > 0 
+      ? Math.round((payments.filter(p => p.status === 'completed').length / payments.length) * 100)
+      : 0
   };
 
   const handleExport = () => {
-    const csv = 'ID,Cliente,Email,Valor,Status,Plano,Data,Método\n' +
+    const csv = 'ID,Usuário,Valor,Status,Plano,Data,Método\n' +
       filteredPayments.map(p => 
-        `${p.id},"${p.clientName}",${p.clientEmail},${p.amount},${statusConfig[p.status].label},${p.plan},${new Date(p.createdAt).toLocaleDateString('pt-BR')},${methodLabels[p.method]}`
+        `${p.id},"${p.user_name}",${p.amount},${statusConfig[p.status]?.label || p.status},${p.plan_name},${new Date(p.created_at).toLocaleDateString('pt-BR')},${methodLabels[p.payment_method || ''] || p.payment_method || '-'}`
       ).join('\n');
     
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -150,7 +136,7 @@ export default function AdminPayments() {
     a.href = url;
     a.download = `pagamentos-${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
-    toast({ title: 'Exportação concluída' });
+    toast.success('Exportação concluída');
   };
 
   const formatDate = (dateString: string) => {
@@ -162,6 +148,14 @@ export default function AdminPayments() {
       minute: '2-digit'
     });
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -176,7 +170,7 @@ export default function AdminPayments() {
             Gerencie transações e faturamento
           </p>
         </div>
-        <Button variant="outline" onClick={handleExport}>
+        <Button variant="outline" onClick={handleExport} disabled={filteredPayments.length === 0}>
           <Download className="h-4 w-4" />
           Exportar
         </Button>
@@ -193,7 +187,7 @@ export default function AdminPayments() {
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold text-green-600">
-              R$ {stats.totalRevenue.toLocaleString('pt-BR')}
+              R$ {stats.totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </p>
           </CardContent>
         </Card>
@@ -206,7 +200,7 @@ export default function AdminPayments() {
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold text-yellow-600">
-              R$ {stats.pendingAmount.toLocaleString('pt-BR')}
+              R$ {stats.pendingAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </p>
           </CardContent>
         </Card>
@@ -241,7 +235,7 @@ export default function AdminPayments() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Buscar por cliente ou email..."
+                placeholder="Buscar por usuário ou ID..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-9"
@@ -253,21 +247,10 @@ export default function AdminPayments() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="todos">Todos</SelectItem>
-                <SelectItem value="paid">Pagos</SelectItem>
+                <SelectItem value="completed">Pagos</SelectItem>
                 <SelectItem value="pending">Pendentes</SelectItem>
                 <SelectItem value="failed">Falhou</SelectItem>
                 <SelectItem value="refunded">Reembolsados</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={periodFilter} onValueChange={setPeriodFilter}>
-              <SelectTrigger className="w-full md:w-40">
-                <SelectValue placeholder="Período" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="7d">Últimos 7 dias</SelectItem>
-                <SelectItem value="30d">Últimos 30 dias</SelectItem>
-                <SelectItem value="90d">Últimos 90 dias</SelectItem>
-                <SelectItem value="all">Todo período</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -283,51 +266,58 @@ export default function AdminPayments() {
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Cliente</TableHead>
-                <TableHead>Plano</TableHead>
-                <TableHead>Valor</TableHead>
-                <TableHead>Método</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Data</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredPayments.map((payment) => {
-                const StatusIcon = statusConfig[payment.status].icon;
-                return (
-                  <TableRow key={payment.id}>
-                    <TableCell>
-                      <div className="flex flex-col">
-                        <span className="font-medium">{payment.clientName}</span>
-                        <span className="text-xs text-muted-foreground">{payment.clientEmail}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{payment.plan}</Badge>
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      R$ {payment.amount.toLocaleString('pt-BR')}
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {methodLabels[payment.method]}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={statusConfig[payment.status].color}>
-                        <StatusIcon className="h-3 w-3 mr-1" />
-                        {statusConfig[payment.status].label}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {formatDate(payment.createdAt)}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+          {filteredPayments.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              Nenhuma transação encontrada
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Usuário</TableHead>
+                  <TableHead>Plano</TableHead>
+                  <TableHead>Valor</TableHead>
+                  <TableHead>Método</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Data</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredPayments.map((payment) => {
+                  const config = statusConfig[payment.status] || statusConfig.pending;
+                  const StatusIcon = config.icon;
+                  return (
+                    <TableRow key={payment.id}>
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{payment.user_name}</span>
+                          <span className="text-xs text-muted-foreground">{payment.id.slice(0, 8)}...</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{payment.plan_name}</Badge>
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        R$ {Number(payment.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {methodLabels[payment.payment_method || ''] || payment.payment_method || '-'}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={config.color}>
+                          <StatusIcon className="h-3 w-3 mr-1" />
+                          {config.label}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {formatDate(payment.created_at)}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </div>

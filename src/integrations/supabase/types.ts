@@ -131,6 +131,66 @@ export type Database = {
         }
         Relationships: []
       }
+      data_leak_alerts: {
+        Row: {
+          actual_domain: string
+          alias_id: string | null
+          created_at: string
+          expected_domain: string | null
+          from_email: string
+          id: string
+          is_notified: boolean | null
+          is_read: boolean | null
+          newsletter_id: string | null
+          notified_at: string | null
+          severity: string | null
+          user_id: string
+        }
+        Insert: {
+          actual_domain: string
+          alias_id?: string | null
+          created_at?: string
+          expected_domain?: string | null
+          from_email: string
+          id?: string
+          is_notified?: boolean | null
+          is_read?: boolean | null
+          newsletter_id?: string | null
+          notified_at?: string | null
+          severity?: string | null
+          user_id: string
+        }
+        Update: {
+          actual_domain?: string
+          alias_id?: string | null
+          created_at?: string
+          expected_domain?: string | null
+          from_email?: string
+          id?: string
+          is_notified?: boolean | null
+          is_read?: boolean | null
+          newsletter_id?: string | null
+          notified_at?: string | null
+          severity?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "data_leak_alerts_alias_id_fkey"
+            columns: ["alias_id"]
+            isOneToOne: false
+            referencedRelation: "email_aliases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "data_leak_alerts_newsletter_id_fkey"
+            columns: ["newsletter_id"]
+            isOneToOne: false
+            referencedRelation: "captured_newsletters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_aliases: {
         Row: {
           alias: string
@@ -295,6 +355,151 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      saas_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string | null
+          external_id: string | null
+          id: string
+          metadata: Json | null
+          paid_at: string | null
+          payment_method: string | null
+          payment_provider: string | null
+          status: string
+          subscription_id: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency?: string | null
+          external_id?: string | null
+          id?: string
+          metadata?: Json | null
+          paid_at?: string | null
+          payment_method?: string | null
+          payment_provider?: string | null
+          status?: string
+          subscription_id?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string | null
+          external_id?: string | null
+          id?: string
+          metadata?: Json | null
+          paid_at?: string | null
+          payment_method?: string | null
+          payment_provider?: string | null
+          status?: string
+          subscription_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saas_payments_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "saas_subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      saas_plans: {
+        Row: {
+          created_at: string
+          description: string | null
+          features: Json | null
+          id: string
+          is_active: boolean | null
+          is_featured: boolean | null
+          max_aliases: number | null
+          max_seeds: number | null
+          name: string
+          price_monthly: number
+          price_yearly: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          features?: Json | null
+          id?: string
+          is_active?: boolean | null
+          is_featured?: boolean | null
+          max_aliases?: number | null
+          max_seeds?: number | null
+          name: string
+          price_monthly?: number
+          price_yearly?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          features?: Json | null
+          id?: string
+          is_active?: boolean | null
+          is_featured?: boolean | null
+          max_aliases?: number | null
+          max_seeds?: number | null
+          name?: string
+          price_monthly?: number
+          price_yearly?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      saas_subscriptions: {
+        Row: {
+          billing_cycle: string | null
+          canceled_at: string | null
+          created_at: string
+          current_period_end: string | null
+          current_period_start: string
+          id: string
+          plan_id: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          billing_cycle?: string | null
+          canceled_at?: string | null
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string
+          id?: string
+          plan_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          billing_cycle?: string | null
+          canceled_at?: string | null
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string
+          id?: string
+          plan_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saas_subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "saas_plans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
