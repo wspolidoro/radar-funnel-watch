@@ -105,46 +105,42 @@ const Settings = () => {
         </TabsContent>
 
         <TabsContent value="team" className="space-y-4">
-          <RoleGuard allowedRoles={['owner', 'admin']}>
-            <Card>
-              <CardHeader>
-                <CardTitle>Membros da Equipe</CardTitle>
-                <CardDescription>
-                  Convide membros e gerencie permissões
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8 text-muted-foreground">
-                  <p className="mb-4">Funcionalidade de convites em breve</p>
-                  <Button variant="outline">Convidar Membro</Button>
-                </div>
-              </CardContent>
-            </Card>
-          </RoleGuard>
+          <Card>
+            <CardHeader>
+              <CardTitle>Membros da Equipe</CardTitle>
+              <CardDescription>
+                Convide membros e gerencie permissões
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8 text-muted-foreground">
+                <p className="mb-4">Funcionalidade de convites em breve</p>
+                <Button variant="outline">Convidar Membro</Button>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="billing" className="space-y-4">
-          <RoleGuard allowedRoles={['owner']}>
-            <div className="grid gap-4 md:grid-cols-3">
-              {['Basic', 'Pro', 'Enterprise'].map(plan => (
-                <Card key={plan} className={plan === 'Pro' ? 'border-primary' : ''}>
-                  <CardHeader>
-                    <CardTitle>{plan}</CardTitle>
-                    {plan === 'Pro' && <Badge>Plano Atual</Badge>}
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-2xl font-bold mb-4">
-                      {plan === 'Basic' ? 'R$ 99' : plan === 'Pro' ? 'R$ 299' : 'Sob consulta'}
-                      <span className="text-sm font-normal text-muted-foreground">/mês</span>
-                    </p>
-                    <Button variant={plan === 'Pro' ? 'default' : 'outline'} className="w-full">
-                      {plan === 'Pro' ? 'Plano Atual' : 'Selecionar'}
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </RoleGuard>
+          <div className="grid gap-4 md:grid-cols-3">
+            {['Basic', 'Pro', 'Enterprise'].map(plan => (
+              <Card key={plan} className={plan === 'Pro' ? 'border-primary' : ''}>
+                <CardHeader>
+                  <CardTitle>{plan}</CardTitle>
+                  {plan === 'Pro' && <Badge>Plano Atual</Badge>}
+                </CardHeader>
+                <CardContent>
+                  <p className="text-2xl font-bold mb-4">
+                    {plan === 'Basic' ? 'R$ 99' : plan === 'Pro' ? 'R$ 299' : 'Sob consulta'}
+                    <span className="text-sm font-normal text-muted-foreground">/mês</span>
+                  </p>
+                  <Button variant={plan === 'Pro' ? 'default' : 'outline'} className="w-full">
+                    {plan === 'Pro' ? 'Plano Atual' : 'Selecionar'}
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </TabsContent>
       </Tabs>
     </div>

@@ -1,57 +1,78 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import type { User, Organization, UserRole } from '@/types';
-import { mockUser, mockOrganization } from '@/services/mockData';
+import { supabase } from '@/integrations/supabase/client';
+import type { User, Session } from '@supabase/supabase-js';
 
 interface AuthContextType {
   user: User | null;
-  organization: Organization | null;
+  session: Session | null;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
-  hasRole: (roles: UserRole[]) => boolean;
+  isLoading: boolean;
+  login: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signup: (email: string, password: string) => Promise<{ error: Error | null }>;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [organization, setOrganization] = useState<Organization | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Simulate checking for existing session
-    const storedUser = localStorage.getItem('radarmail_user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-      setOrganization(mockOrganization);
-    }
-  }, [])
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        setIsLoading(false);
+      }
+    );
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setIsLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const login = async (email: string, password: string) => {
-    // Mock login - replace with real authentication
-    await new Promise(resolve => setTimeout(resolve, 500));
-    setUser(mockUser);
-    setOrganization(mockOrganization);
-    localStorage.setItem('radarmail_user', JSON.stringify(mockUser));
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    return { error };
   };
 
-  const logout = () => {
-    setUser(null);
-    setOrganization(null);
-    localStorage.removeItem('radarmail_user');
+  const signup = async (email: string, password: string) => {
+    const redirectUrl = `${window.location.origin}/`;
+    
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: redirectUrl
+      }
+    });
+    return { error };
   };
 
-  const hasRole = (roles: UserRole[]) => {
-    return user ? roles.includes(user.role) : false;
+  const logout = async () => {
+    await supabase.auth.signOut();
   };
 
   return (
     <AuthContext.Provider value={{
       user,
-      organization,
-      isAuthenticated: !!user,
+      session,
+      isAuthenticated: !!session,
+      isLoading,
       login,
-      logout,
-      hasRole
+      signup,
+      logout
     }}>
       {children}
     </AuthContext.Provider>
