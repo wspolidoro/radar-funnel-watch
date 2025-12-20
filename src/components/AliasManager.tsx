@@ -1,0 +1,314 @@
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
+import { Plus, Copy, Mail, CheckCircle, Clock, Trash2, ExternalLink } from 'lucide-react';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+
+interface EmailAlias {
+  id: string;
+  alias: string;
+  local_part: string;
+  domain: string;
+  name: string | null;
+  description: string | null;
+  sender_name: string | null;
+  sender_category: string | null;
+  is_confirmed: boolean;
+  first_email_at: string | null;
+  email_count: number;
+  created_at: string;
+}
+
+interface EmailDomain {
+  id: string;
+  domain: string;
+  provider: string;
+  is_verified: boolean;
+  is_active: boolean;
+}
+
+export function AliasManager() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [isOpen, setIsOpen] = useState(false);
+  const [localPart, setLocalPart] = useState('');
+  const [selectedDomain, setSelectedDomain] = useState('');
+  const [aliasName, setAliasName] = useState('');
+  const [aliasDescription, setAliasDescription] = useState('');
+
+  // Fetch domains
+  const { data: domains = [] } = useQuery({
+    queryKey: ['email-domains', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('email_domains')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data as EmailDomain[];
+    },
+    enabled: !!user,
+  });
+
+  // Fetch aliases
+  const { data: aliases = [], isLoading } = useQuery({
+    queryKey: ['email-aliases', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('email_aliases')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data as EmailAlias[];
+    },
+    enabled: !!user,
+  });
+
+  // Create alias mutation
+  const createAliasMutation = useMutation({
+    mutationFn: async () => {
+      if (!localPart || !selectedDomain) {
+        throw new Error('Preencha todos os campos obrigatórios');
+      }
+
+      const alias = `${localPart}@${selectedDomain}`;
+
+      const { data, error } = await supabase
+        .from('email_aliases')
+        .insert({
+          user_id: user?.id,
+          alias,
+          local_part: localPart,
+          domain: selectedDomain,
+          name: aliasName || localPart,
+          description: aliasDescription || null,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['email-aliases'] });
+      toast.success('Alias criado com sucesso!', {
+        description: `Use ${data.alias} para se inscrever em newsletters`,
+      });
+      setIsOpen(false);
+      resetForm();
+    },
+    onError: (error: Error) => {
+      toast.error('Erro ao criar alias', { description: error.message });
+    },
+  });
+
+  // Delete alias mutation
+  const deleteAliasMutation = useMutation({
+    mutationFn: async (aliasId: string) => {
+      const { error } = await supabase
+        .from('email_aliases')
+        .delete()
+        .eq('id', aliasId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['email-aliases'] });
+      toast.success('Alias removido');
+    },
+    onError: (error: Error) => {
+      toast.error('Erro ao remover alias', { description: error.message });
+    },
+  });
+
+  const resetForm = () => {
+    setLocalPart('');
+    setSelectedDomain('');
+    setAliasName('');
+    setAliasDescription('');
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success('Email copiado!');
+  };
+
+  const getStatusBadge = (alias: EmailAlias) => {
+    if (alias.email_count > 0 && alias.is_confirmed) {
+      return <Badge variant="default" className="bg-success"><CheckCircle className="w-3 h-3 mr-1" /> Ativo</Badge>;
+    }
+    if (alias.email_count > 0) {
+      return <Badge variant="secondary"><Mail className="w-3 h-3 mr-1" /> Recebendo</Badge>;
+    }
+    return <Badge variant="outline"><Clock className="w-3 h-3 mr-1" /> Aguardando</Badge>;
+  };
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+          <CardTitle>Aliases de Email</CardTitle>
+          <CardDescription>
+            Crie emails únicos para cada inscrição de newsletter
+          </CardDescription>
+        </div>
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="w-4 h-4 mr-2" />
+              Novo Alias
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Criar Novo Alias</DialogTitle>
+              <DialogDescription>
+                Crie um email único para rastrear uma newsletter específica
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="localPart">Identificador</Label>
+                  <Input
+                    id="localPart"
+                    placeholder="apple2024"
+                    value={localPart}
+                    onChange={(e) => setLocalPart(e.target.value.toLowerCase().replace(/[^a-z0-9._-]/g, ''))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="domain">Domínio</Label>
+                  <Select value={selectedDomain} onValueChange={setSelectedDomain}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {domains.map((domain) => (
+                        <SelectItem key={domain.id} value={domain.domain}>
+                          @{domain.domain}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {localPart && selectedDomain && (
+                <div className="p-3 bg-muted rounded-lg">
+                  <p className="text-sm text-muted-foreground">Email que será criado:</p>
+                  <p className="font-mono font-medium">{localPart}@{selectedDomain}</p>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="name">Nome (opcional)</Label>
+                <Input
+                  id="name"
+                  placeholder="Newsletter da Apple"
+                  value={aliasName}
+                  onChange={(e) => setAliasName(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="description">Descrição (opcional)</Label>
+                <Input
+                  id="description"
+                  placeholder="Novidades e lançamentos de produtos"
+                  value={aliasDescription}
+                  onChange={(e) => setAliasDescription(e.target.value)}
+                />
+              </div>
+
+              <Button
+                onClick={() => createAliasMutation.mutate()}
+                disabled={!localPart || !selectedDomain || createAliasMutation.isPending}
+                className="w-full"
+              >
+                {createAliasMutation.isPending ? 'Criando...' : 'Criar Alias'}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </CardHeader>
+      <CardContent>
+        {domains.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <Mail className="w-12 h-12 mx-auto mb-4 opacity-50" />
+            <p>Nenhum domínio configurado</p>
+            <p className="text-sm">Configure um domínio em Configurações para começar</p>
+          </div>
+        ) : isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        ) : aliases.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <Mail className="w-12 h-12 mx-auto mb-4 opacity-50" />
+            <p>Nenhum alias criado ainda</p>
+            <p className="text-sm">Clique em "Novo Alias" para começar</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {aliases.map((alias) => (
+              <div
+                key={alias.id}
+                className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-mono font-medium truncate">{alias.alias}</span>
+                    <button
+                      onClick={() => copyToClipboard(alias.alias)}
+                      className="p-1 hover:bg-muted rounded"
+                    >
+                      <Copy className="w-4 h-4 text-muted-foreground" />
+                    </button>
+                    {getStatusBadge(alias)}
+                  </div>
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    {alias.name && <span>{alias.name}</span>}
+                    {alias.sender_name && (
+                      <span className="flex items-center gap-1">
+                        <ExternalLink className="w-3 h-3" />
+                        {alias.sender_name}
+                      </span>
+                    )}
+                    <span>{alias.email_count} emails</span>
+                    {alias.first_email_at && (
+                      <span>
+                        Primeiro email: {format(new Date(alias.first_email_at), "dd 'de' MMM", { locale: ptBR })}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => deleteAliasMutation.mutate(alias.id)}
+                  disabled={deleteAliasMutation.isPending}
+                >
+                  <Trash2 className="w-4 h-4 text-destructive" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}

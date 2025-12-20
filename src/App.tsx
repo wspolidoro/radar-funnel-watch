@@ -17,6 +17,7 @@ import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import CapturedNewsletters from "./pages/CapturedNewsletters";
+import Analytics from "./pages/Analytics";
 
 const queryClient = new QueryClient();
 
@@ -61,6 +62,7 @@ const App = () => (
               <Route path="/reports" element={<Reports />} />
               <Route path="/clients" element={<Clients />} />
               <Route path="/newsletters" element={<CapturedNewsletters />} />
+              <Route path="/analytics" element={<Analytics />} />
               <Route path="/settings" element={<Settings />} />
             </Route>
             <Route path="*" element={<NotFound />} />
