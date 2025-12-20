@@ -281,6 +281,66 @@ export type Database = {
         }
         Relationships: []
       }
+      email_funnels: {
+        Row: {
+          avg_interval_hours: number | null
+          color: string | null
+          created_at: string
+          description: string | null
+          email_ids: string[] | null
+          first_email_at: string | null
+          icon: string | null
+          id: string
+          is_active: boolean | null
+          last_email_at: string | null
+          name: string
+          sender_email: string
+          sender_name: string | null
+          tags: string[] | null
+          total_emails: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avg_interval_hours?: number | null
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          email_ids?: string[] | null
+          first_email_at?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_email_at?: string | null
+          name: string
+          sender_email: string
+          sender_name?: string | null
+          tags?: string[] | null
+          total_emails?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avg_interval_hours?: number | null
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          email_ids?: string[] | null
+          first_email_at?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_email_at?: string | null
+          name?: string
+          sender_email?: string
+          sender_name?: string | null
+          tags?: string[] | null
+          total_emails?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       email_seeds: {
         Row: {
           created_at: string
@@ -415,6 +475,63 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      reports: {
+        Row: {
+          content_json: Json | null
+          created_at: string
+          description: string | null
+          email_sent_at: string | null
+          file_url: string | null
+          format: string | null
+          id: string
+          is_scheduled: boolean | null
+          period_end: string
+          period_start: string
+          schedule_frequency: string | null
+          send_email: boolean | null
+          status: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content_json?: Json | null
+          created_at?: string
+          description?: string | null
+          email_sent_at?: string | null
+          file_url?: string | null
+          format?: string | null
+          id?: string
+          is_scheduled?: boolean | null
+          period_end: string
+          period_start: string
+          schedule_frequency?: string | null
+          send_email?: boolean | null
+          status?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content_json?: Json | null
+          created_at?: string
+          description?: string | null
+          email_sent_at?: string | null
+          file_url?: string | null
+          format?: string | null
+          id?: string
+          is_scheduled?: boolean | null
+          period_end?: string
+          period_start?: string
+          schedule_frequency?: string | null
+          send_email?: boolean | null
+          status?: string | null
+          title?: string
           updated_at?: string
           user_id?: string
         }

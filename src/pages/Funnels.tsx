@@ -1,16 +1,16 @@
-import { useEffect, useState } from 'react';
-import { GitBranch, Eye, Download, GitCompare, Mail, Clock, TrendingUp, Filter, Target } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { 
+  GitBranch, Eye, Download, Plus, Mail, Clock, TrendingUp, Filter, 
+  Target, Loader2, Calendar, Tag, Sparkles, Palette
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Sheet,
   SheetContent,
@@ -25,124 +25,277 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { EmailCategoryBadge } from '@/components/EmailCategoryBadge';
 import { EmailThumbnail } from '@/components/EmailThumbnail';
 import { EmailViewer } from '@/components/EmailViewer';
-import { funnelService, competitorService } from '@/services/api';
-import { mockEmails } from '@/services/mockData';
-import type { Funnel, Competitor, Email } from '@/types';
-import { useToast } from '@/hooks/use-toast';
+import { format, differenceInHours, differenceInDays } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { toast } from 'sonner';
+import type { Email } from '@/types';
+import { cn } from '@/lib/utils';
+
+interface EmailFunnel {
+  id: string;
+  name: string;
+  description: string | null;
+  sender_email: string;
+  sender_name: string | null;
+  email_ids: string[];
+  color: string;
+  icon: string;
+  tags: string[];
+  total_emails: number;
+  first_email_at: string | null;
+  last_email_at: string | null;
+  avg_interval_hours: number | null;
+  is_active: boolean;
+  created_at: string;
+}
+
+interface CapturedNewsletter {
+  id: string;
+  from_email: string;
+  from_name: string | null;
+  subject: string;
+  html_content: string | null;
+  received_at: string;
+  category: string | null;
+  ctas: any;
+}
+
+const colorOptions = [
+  { value: '#3b82f6', label: 'Azul' },
+  { value: '#10b981', label: 'Verde' },
+  { value: '#f59e0b', label: 'Amarelo' },
+  { value: '#ef4444', label: 'Vermelho' },
+  { value: '#8b5cf6', label: 'Roxo' },
+  { value: '#ec4899', label: 'Rosa' },
+  { value: '#06b6d4', label: 'Ciano' },
+];
+
+const categoryColors: Record<string, string> = {
+  onboarding: 'border-blue-500/40 shadow-blue-500/20',
+  educacao: 'border-green-500/40 shadow-green-500/20',
+  promo: 'border-red-500/40 shadow-red-500/20',
+  reengajamento: 'border-orange-500/40 shadow-orange-500/20',
+  sazonal: 'border-purple-500/40 shadow-purple-500/20',
+  newsletter: 'border-cyan-500/40 shadow-cyan-500/20',
+};
 
 const Funnels = () => {
-  const [funnels, setFunnels] = useState<Funnel[]>([]);
-  const [competitors, setCompetitors] = useState<Competitor[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedFunnel, setSelectedFunnel] = useState<Funnel | null>(null);
-  const [selectedForComparison, setSelectedForComparison] = useState<string[]>([]);
-  const [comparingFunnels, setComparingFunnels] = useState<Funnel[]>([]);
-  const [showComparison, setShowComparison] = useState(false);
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [selectedFunnel, setSelectedFunnel] = useState<EmailFunnel | null>(null);
   const [viewingEmail, setViewingEmail] = useState<Email | null>(null);
-  const [filters, setFilters] = useState({
-    competitorId: 'all',
-    category: 'all',
-    period: '30d'
+  const [senderFilter, setSenderFilter] = useState('all');
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [newFunnelName, setNewFunnelName] = useState('');
+  const [newFunnelSender, setNewFunnelSender] = useState('');
+  const [newFunnelColor, setNewFunnelColor] = useState('#3b82f6');
+  const [isDetecting, setIsDetecting] = useState(false);
+
+  // Fetch funnels
+  const { data: funnels, isLoading } = useQuery({
+    queryKey: ['email-funnels'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('email_funnels')
+        .select('*')
+        .order('last_email_at', { ascending: false });
+      
+      if (error) throw error;
+      return data as EmailFunnel[];
+    },
   });
-  const { toast } = useToast();
 
-  useEffect(() => {
-    loadData();
-  }, [filters]);
+  // Fetch unique senders for filter
+  const { data: senders } = useQuery({
+    queryKey: ['funnel-senders'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('captured_newsletters')
+        .select('from_email, from_name')
+        .order('from_email');
+      
+      if (error) throw error;
+      
+      const unique = new Map<string, string>();
+      (data || []).forEach(d => {
+        if (!unique.has(d.from_email)) {
+          unique.set(d.from_email, d.from_name || d.from_email);
+        }
+      });
+      
+      return Array.from(unique.entries()).map(([email, name]) => ({ email, name }));
+    },
+  });
 
-  const loadData = async () => {
+  // Fetch emails for selected funnel
+  const { data: funnelEmails } = useQuery({
+    queryKey: ['funnel-emails', selectedFunnel?.id],
+    queryFn: async () => {
+      if (!selectedFunnel || !selectedFunnel.email_ids.length) return [];
+      
+      const { data, error } = await supabase
+        .from('captured_newsletters')
+        .select('*')
+        .in('id', selectedFunnel.email_ids)
+        .order('received_at', { ascending: true });
+      
+      if (error) throw error;
+      return data as CapturedNewsletter[];
+    },
+    enabled: !!selectedFunnel?.email_ids?.length,
+  });
+
+  // Create funnel mutation
+  const createMutation = useMutation({
+    mutationFn: async () => {
+      if (!user || !newFunnelName.trim() || !newFunnelSender) {
+        throw new Error('Preencha todos os campos');
+      }
+
+      // Find emails from this sender
+      const { data: emails, error: emailsError } = await supabase
+        .from('captured_newsletters')
+        .select('id, received_at')
+        .eq('from_email', newFunnelSender)
+        .order('received_at', { ascending: true });
+      
+      if (emailsError) throw emailsError;
+
+      const emailIds = (emails || []).map(e => e.id);
+      const firstEmail = emails?.[0];
+      const lastEmail = emails?.[emails.length - 1];
+
+      // Calculate average interval
+      let avgInterval = null;
+      if (emails && emails.length > 1) {
+        let totalHours = 0;
+        for (let i = 1; i < emails.length; i++) {
+          totalHours += differenceInHours(
+            new Date(emails[i].received_at),
+            new Date(emails[i - 1].received_at)
+          );
+        }
+        avgInterval = Math.round(totalHours / (emails.length - 1));
+      }
+
+      const senderData = senders?.find(s => s.email === newFunnelSender);
+
+      const { error } = await supabase
+        .from('email_funnels')
+        .insert({
+          user_id: user.id,
+          name: newFunnelName.trim(),
+          sender_email: newFunnelSender,
+          sender_name: senderData?.name || null,
+          email_ids: emailIds,
+          color: newFunnelColor,
+          total_emails: emailIds.length,
+          first_email_at: firstEmail?.received_at || null,
+          last_email_at: lastEmail?.received_at || null,
+          avg_interval_hours: avgInterval,
+        });
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['email-funnels'] });
+      setIsCreateOpen(false);
+      setNewFunnelName('');
+      setNewFunnelSender('');
+      toast.success('Funil criado com sucesso!');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
+  // Auto-detect funnels
+  const detectFunnels = async () => {
+    setIsDetecting(true);
     try {
-      setLoading(true);
-      const [funnelsData, competitorsData] = await Promise.all([
-        funnelService.list(filters),
-        competitorService.list()
-      ]);
-      setFunnels(funnelsData);
-      setCompetitors(competitorsData);
+      const { error } = await supabase.functions.invoke('detect-funnels', {
+        body: { userId: user?.id }
+      });
+
+      if (error) throw error;
+
+      queryClient.invalidateQueries({ queryKey: ['email-funnels'] });
+      toast.success('Funis detectados automaticamente!');
+    } catch (error) {
+      console.error('Error detecting funnels:', error);
+      toast.error('Erro ao detectar funis');
     } finally {
-      setLoading(false);
+      setIsDetecting(false);
     }
   };
 
-  const handleCompare = async () => {
-    if (selectedForComparison.length < 2) {
-      toast({
-        title: 'Selecione pelo menos 2 funis',
-        description: 'Você precisa selecionar 2 ou 3 funis para comparar.',
-        variant: 'destructive'
-      });
+  // Filter funnels
+  const filteredFunnels = useMemo(() => {
+    if (!funnels) return [];
+    if (senderFilter === 'all') return funnels;
+    return funnels.filter(f => f.sender_email === senderFilter);
+  }, [funnels, senderFilter]);
+
+  // Metrics
+  const metrics = useMemo(() => {
+    if (!funnels?.length) return { total: 0, totalEmails: 0, avgInterval: 0, longestFunnel: 0 };
+    
+    const totalEmails = funnels.reduce((sum, f) => sum + f.total_emails, 0);
+    const avgInterval = Math.round(
+      funnels.reduce((sum, f) => sum + (f.avg_interval_hours || 0), 0) / funnels.length
+    );
+    const longestFunnel = Math.max(...funnels.map(f => f.total_emails));
+
+    return { total: funnels.length, totalEmails, avgInterval, longestFunnel };
+  }, [funnels]);
+
+  const convertToEmail = (newsletter: CapturedNewsletter): Email => ({
+    id: newsletter.id,
+    from: newsletter.from_name 
+      ? `${newsletter.from_name} <${newsletter.from_email}>`
+      : newsletter.from_email,
+    subject: newsletter.subject,
+    htmlContent: newsletter.html_content || '',
+    textContent: '',
+    receivedAt: newsletter.received_at,
+    category: (newsletter.category || 'newsletter') as Email['category'],
+    ctas: Array.isArray(newsletter.ctas) ? newsletter.ctas : [],
+    isAbVariant: false,
+    competitorId: '',
+    topics: [],
+    sentimentScore: 0,
+  });
+
+  const handleExport = () => {
+    if (!filteredFunnels.length) {
+      toast.error('Nenhum funil para exportar');
       return;
     }
+
+    const csv = 'Nome,Remetente,Total Emails,Intervalo Médio (h),Primeiro Email,Último Email\n' +
+      filteredFunnels.map(f => 
+        `"${f.name}","${f.sender_email}",${f.total_emails},${f.avg_interval_hours || 0},"${f.first_email_at || ''}","${f.last_email_at || ''}"`
+      ).join('\n');
     
-    const compared = await funnelService.compare(selectedForComparison);
-    setComparingFunnels(compared);
-    setShowComparison(true);
-  };
-
-  const handleExport = async () => {
-    await funnelService.exportCSV(filters);
-    toast({
-      title: 'Exportando funis',
-      description: 'O download do CSV começará em breve.'
-    });
-  };
-
-  const toggleSelection = (funnelId: string) => {
-    setSelectedForComparison(prev => {
-      if (prev.includes(funnelId)) {
-        return prev.filter(id => id !== funnelId);
-      }
-      if (prev.length >= 3) {
-        toast({
-          title: 'Limite atingido',
-          description: 'Você pode comparar no máximo 3 funis.',
-          variant: 'destructive'
-        });
-        return prev;
-      }
-      return [...prev, funnelId];
-    });
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR');
-  };
-
-  const getDuration = (startDate: string, endDate?: string) => {
-    const start = new Date(startDate);
-    const end = endDate ? new Date(endDate) : new Date();
-    const days = Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-    return days;
-  };
-
-  const getCompetitorName = (competitorId: string) => {
-    return competitors.find(c => c.id === competitorId)?.name || 'Desconhecido';
-  };
-
-  // Calculate metrics
-  const metrics = {
-    total: funnels.length,
-    newLast30d: funnels.filter(f => {
-      const start = new Date(f.startDate);
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      return start >= thirtyDaysAgo;
-    }).length,
-    longest: Math.max(...funnels.map(f => f.emails.length), 0),
-    avgInterval: funnels.length > 0 
-      ? Math.round(funnels.reduce((sum, f) => sum + f.cadenceSummary.avgGap, 0) / funnels.length) 
-      : 0,
-    mostActive: competitors.reduce((acc, comp) => {
-      const count = funnels.filter(f => f.competitorId === comp.id).length;
-      return count > acc.count ? { name: comp.name, count } : acc;
-    }, { name: '', count: 0 })
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `funis-${format(new Date(), 'yyyy-MM-dd')}.csv`;
+    a.click();
+    toast.success('Exportação concluída');
   };
 
   return (
@@ -150,22 +303,95 @@ const Funnels = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Funis de E-mails</h1>
+          <h1 className="text-3xl font-bold flex items-center gap-2">
+            <GitBranch className="h-8 w-8" />
+            Funis de E-mails
+          </h1>
           <p className="text-muted-foreground mt-1">
-            Sequências detectadas automaticamente de concorrentes
+            Visualize sequências de emails em linhas do tempo visuais
           </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={handleExport}>
             <Download className="h-4 w-4 mr-2" />
-            Exportar CSV
+            Exportar
           </Button>
-          {selectedForComparison.length >= 2 && (
-            <Button onClick={handleCompare}>
-              <GitCompare className="h-4 w-4 mr-2" />
-              Comparar ({selectedForComparison.length})
-            </Button>
-          )}
+          <Button variant="outline" onClick={detectFunnels} disabled={isDetecting}>
+            <Sparkles className={cn("h-4 w-4 mr-2", isDetecting && "animate-pulse")} />
+            {isDetecting ? 'Detectando...' : 'Auto-detectar'}
+          </Button>
+          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Novo Funil
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Criar Novo Funil</DialogTitle>
+                <DialogDescription>
+                  Agrupe emails de um remetente em uma sequência visual
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Nome do Funil</Label>
+                  <Input
+                    placeholder="Ex: Onboarding da Empresa X"
+                    value={newFunnelName}
+                    onChange={(e) => setNewFunnelName(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Remetente</Label>
+                  <Select value={newFunnelSender} onValueChange={setNewFunnelSender}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione um remetente" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {senders?.map(s => (
+                        <SelectItem key={s.email} value={s.email}>
+                          {s.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Cor</Label>
+                  <div className="flex gap-2">
+                    {colorOptions.map(c => (
+                      <button
+                        key={c.value}
+                        type="button"
+                        className={cn(
+                          "w-8 h-8 rounded-full border-2 transition-all",
+                          newFunnelColor === c.value ? "border-foreground scale-110" : "border-transparent"
+                        )}
+                        style={{ backgroundColor: c.value }}
+                        onClick={() => setNewFunnelColor(c.value)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button 
+                  onClick={() => createMutation.mutate()}
+                  disabled={createMutation.isPending || !newFunnelName.trim() || !newFunnelSender}
+                >
+                  {createMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : null}
+                  Criar Funil
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
@@ -174,56 +400,17 @@ const Funnels = () => {
         <CardContent className="pt-6">
           <div className="flex gap-4">
             <div className="flex-1">
-              <label className="text-sm font-medium mb-2 block">Concorrente</label>
-              <Select
-                value={filters.competitorId}
-                onValueChange={(value) => setFilters({ ...filters, competitorId: value })}
-              >
+              <Label className="text-sm font-medium mb-2 block">Remetente</Label>
+              <Select value={senderFilter} onValueChange={setSenderFilter}>
                 <SelectTrigger>
-                  <SelectValue />
+                  <Filter className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="Todos" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {competitors.map(comp => (
-                    <SelectItem key={comp.id} value={comp.id}>
-                      {comp.name}
-                    </SelectItem>
+                  <SelectItem value="all">Todos os remetentes</SelectItem>
+                  {senders?.map(s => (
+                    <SelectItem key={s.email} value={s.email}>{s.name}</SelectItem>
                   ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex-1">
-              <label className="text-sm font-medium mb-2 block">Categoria</label>
-              <Select
-                value={filters.category}
-                onValueChange={(value) => setFilters({ ...filters, category: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas</SelectItem>
-                  <SelectItem value="onboarding">Onboarding</SelectItem>
-                  <SelectItem value="promo">Promoção</SelectItem>
-                  <SelectItem value="educacao">Educação</SelectItem>
-                  <SelectItem value="reengajamento">Reengajamento</SelectItem>
-                  <SelectItem value="sazonal">Sazonal</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex-1">
-              <label className="text-sm font-medium mb-2 block">Período</label>
-              <Select
-                value={filters.period}
-                onValueChange={(value) => setFilters({ ...filters, period: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="7d">Últimos 7 dias</SelectItem>
-                  <SelectItem value="30d">Últimos 30 dias</SelectItem>
-                  <SelectItem value="90d">Últimos 90 dias</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -232,7 +419,7 @@ const Funnels = () => {
       </Card>
 
       {/* Metrics */}
-      <div className="grid gap-4 md:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total de Funis</CardTitle>
@@ -245,23 +432,11 @@ const Funnels = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Funis Novos</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{metrics.newLast30d}</div>
-            <p className="text-xs text-muted-foreground">Últimos 30 dias</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Funil Mais Longo</CardTitle>
+            <CardTitle className="text-sm font-medium">Total de E-mails</CardTitle>
             <Mail className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{metrics.longest}</div>
-            <p className="text-xs text-muted-foreground">E-mails</p>
+            <div className="text-2xl font-bold">{metrics.totalEmails}</div>
           </CardContent>
         </Card>
 
@@ -277,432 +452,254 @@ const Funnels = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Mais Ativo</CardTitle>
-            <Filter className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Maior Funil</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-lg font-bold truncate">{metrics.mostActive.name || '-'}</div>
-            <p className="text-xs text-muted-foreground">{metrics.mostActive.count} funis</p>
+            <div className="text-2xl font-bold">{metrics.longestFunnel}</div>
+            <p className="text-xs text-muted-foreground">e-mails</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Table */}
-      {loading ? (
-        <div className="space-y-2">
-          {[...Array(5)].map((_, i) => (
-            <Skeleton key={i} className="h-16 w-full" />
+      {/* Funnels Grid */}
+      {isLoading ? (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[...Array(6)].map((_, i) => (
+            <Skeleton key={i} className="h-48" />
           ))}
         </div>
-      ) : funnels.length === 0 ? (
+      ) : !filteredFunnels?.length ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <GitBranch className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">Nenhum funil detectado ainda.</p>
+            <h3 className="text-lg font-semibold mb-2">Nenhum funil criado</h3>
+            <p className="text-muted-foreground text-center mb-4">
+              Crie funis para visualizar sequências de emails em linhas do tempo
+            </p>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={detectFunnels}>
+                <Sparkles className="h-4 w-4 mr-2" />
+                Auto-detectar
+              </Button>
+              <Button onClick={() => setIsCreateOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Criar Manualmente
+              </Button>
+            </div>
           </CardContent>
         </Card>
       ) : (
-        <div className="border rounded-lg">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-12"></TableHead>
-                <TableHead>Nome do Funil</TableHead>
-                <TableHead>Concorrente</TableHead>
-                <TableHead className="text-right">Nº de E-mails</TableHead>
-                <TableHead className="text-right">Duração (dias)</TableHead>
-                <TableHead className="text-right">Intervalo Médio</TableHead>
-                <TableHead>Último E-mail</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {funnels.map((funnel) => (
-                <TableRow key={funnel.id}>
-                  <TableCell>
-                    <Checkbox
-                      checked={selectedForComparison.includes(funnel.id)}
-                      onCheckedChange={() => toggleSelection(funnel.id)}
-                    />
-                  </TableCell>
-                  <TableCell className="font-medium">{funnel.name}</TableCell>
-                  <TableCell>{getCompetitorName(funnel.competitorId)}</TableCell>
-                  <TableCell className="text-right">{funnel.emails.length}</TableCell>
-                  <TableCell className="text-right">
-                    {getDuration(funnel.startDate, funnel.endDate)}
-                  </TableCell>
-                  <TableCell className="text-right">{funnel.cadenceSummary.avgGap}h</TableCell>
-                  <TableCell>{formatDate(funnel.lastEmailAt)}</TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setSelectedFunnel(funnel)}
-                    >
-                      <Eye className="h-4 w-4 mr-1" />
-                      Ver
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {filteredFunnels.map((funnel) => (
+            <Card 
+              key={funnel.id} 
+              className="cursor-pointer hover:shadow-lg transition-all group"
+              style={{ borderLeftColor: funnel.color, borderLeftWidth: 4 }}
+              onClick={() => setSelectedFunnel(funnel)}
+            >
+              <CardHeader className="pb-2">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <CardTitle className="text-lg">{funnel.name}</CardTitle>
+                    <CardDescription>{funnel.sender_name || funnel.sender_email}</CardDescription>
+                  </div>
+                  <Badge variant="secondary">{funnel.total_emails} emails</Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
+                  {funnel.avg_interval_hours && (
+                    <span className="flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      {funnel.avg_interval_hours}h intervalo
+                    </span>
+                  )}
+                  {funnel.first_email_at && funnel.last_email_at && (
+                    <span className="flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      {differenceInDays(new Date(funnel.last_email_at), new Date(funnel.first_email_at))} dias
+                    </span>
+                  )}
+                </div>
+                {funnel.tags && funnel.tags.length > 0 && (
+                  <div className="flex gap-1 flex-wrap">
+                    {funnel.tags.slice(0, 3).map((tag, i) => (
+                      <Badge key={i} variant="outline" className="text-xs">
+                        <Tag className="h-2 w-2 mr-1" />
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+                <Button variant="ghost" size="sm" className="mt-2 w-full opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Eye className="h-4 w-4 mr-2" />
+                  Ver Timeline
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       )}
 
       {/* Funnel Detail Sheet */}
       <Sheet open={!!selectedFunnel} onOpenChange={() => setSelectedFunnel(null)}>
-        <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
+        <SheetContent className="w-full sm:max-w-3xl overflow-y-auto">
           {selectedFunnel && (
             <>
               <SheetHeader>
-                <SheetTitle>{selectedFunnel.name}</SheetTitle>
+                <div className="flex items-center gap-3">
+                  <div 
+                    className="w-4 h-4 rounded-full" 
+                    style={{ backgroundColor: selectedFunnel.color }}
+                  />
+                  <SheetTitle>{selectedFunnel.name}</SheetTitle>
+                </div>
                 <SheetDescription>
-                  {getCompetitorName(selectedFunnel.competitorId)} • {selectedFunnel.emails.length} e-mails
+                  {selectedFunnel.sender_name || selectedFunnel.sender_email} • {selectedFunnel.total_emails} e-mails
                 </SheetDescription>
               </SheetHeader>
 
-              <Tabs defaultValue="flow" className="mt-6">
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="flow">Fluxograma</TabsTrigger>
-                  <TabsTrigger value="stats">Estatísticas</TabsTrigger>
-                  <TabsTrigger value="insights">Insights</TabsTrigger>
-                </TabsList>
+              {/* Stats */}
+              <div className="grid grid-cols-3 gap-4 mt-6 mb-6">
+                <Card className="bg-muted/50">
+                  <CardContent className="pt-4">
+                    <p className="text-xs text-muted-foreground">Duração Total</p>
+                    <p className="text-lg font-bold">
+                      {selectedFunnel.first_email_at && selectedFunnel.last_email_at
+                        ? `${differenceInDays(new Date(selectedFunnel.last_email_at), new Date(selectedFunnel.first_email_at))} dias`
+                        : '-'}
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-muted/50">
+                  <CardContent className="pt-4">
+                    <p className="text-xs text-muted-foreground">Intervalo Médio</p>
+                    <p className="text-lg font-bold">
+                      {selectedFunnel.avg_interval_hours ? `${selectedFunnel.avg_interval_hours}h` : '-'}
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-muted/50">
+                  <CardContent className="pt-4">
+                    <p className="text-xs text-muted-foreground">Total E-mails</p>
+                    <p className="text-lg font-bold">{selectedFunnel.total_emails}</p>
+                  </CardContent>
+                </Card>
+              </div>
 
-                <TabsContent value="flow" className="space-y-6 mt-6">
-                  {/* Grid de Miniaturas */}
-                  <div>
-                    <h4 className="text-sm font-semibold mb-4">Sequência de E-mails</h4>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                      {selectedFunnel.emails.map((email) => {
-                        const fullEmail = mockEmails.find(e => e.id === email.id);
-                        const categoryColors = {
-                          onboarding: 'border-blue-500/40 shadow-blue-500/20',
-                          educacao: 'border-green-500/40 shadow-green-500/20',
-                          promo: 'border-red-500/40 shadow-red-500/20',
-                          reengajamento: 'border-orange-500/40 shadow-orange-500/20',
-                          sazonal: 'border-purple-500/40 shadow-purple-500/20',
-                        };
-                        
-                        return (
-                          <div
-                            key={email.id}
-                            className={cn(
-                              "relative group border-2 rounded-lg overflow-hidden transition-all hover:scale-105 hover:shadow-lg",
-                              categoryColors[email.category as keyof typeof categoryColors] || 'border-border'
-                            )}
-                          >
-                            <div className="aspect-[3/4] relative bg-white">
-                              <EmailThumbnail
-                                htmlContent={fullEmail?.htmlContent}
-                                subject={email.subject}
-                                onClick={() => {
-                                  if (fullEmail) {
-                                    setViewingEmail(fullEmail);
-                                  }
-                                }}
-                              />
-                            </div>
-                            
-                            <div className="p-3 space-y-2 bg-card">
-                              <div className="flex items-center justify-between gap-2">
-                                <Badge variant="secondary" className="text-xs font-bold">
-                                  D+{email.dayOffset ?? 0}
+              {/* Timeline */}
+              <div className="space-y-6">
+                <h4 className="font-semibold flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  Linha do Tempo
+                </h4>
+                
+                {!funnelEmails?.length ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {funnelEmails.map((email, index) => {
+                      const prevEmail = funnelEmails[index - 1];
+                      const dayOffset = prevEmail
+                        ? differenceInDays(new Date(email.received_at), new Date(funnelEmails[0].received_at))
+                        : 0;
+
+                      return (
+                        <div
+                          key={email.id}
+                          className={cn(
+                            "relative group border-2 rounded-lg overflow-hidden transition-all hover:scale-105 hover:shadow-lg cursor-pointer",
+                            categoryColors[email.category || ''] || 'border-border'
+                          )}
+                          onClick={() => setViewingEmail(convertToEmail(email))}
+                        >
+                          <div className="aspect-[3/4] relative bg-white">
+                            <EmailThumbnail
+                              htmlContent={email.html_content}
+                              subject={email.subject}
+                              onClick={() => setViewingEmail(convertToEmail(email))}
+                            />
+                          </div>
+                          
+                          <div className="p-3 space-y-2 bg-card">
+                            <div className="flex items-center justify-between gap-2">
+                              <Badge 
+                                variant="secondary" 
+                                className="text-xs font-bold"
+                                style={{ backgroundColor: `${selectedFunnel.color}20`, color: selectedFunnel.color }}
+                              >
+                                D+{dayOffset}
+                              </Badge>
+                              {email.category && (
+                                <Badge variant="outline" className="text-xs">
+                                  {email.category}
                                 </Badge>
-                                <EmailCategoryBadge category={email.category} />
-                              </div>
-                              
-                              <h4 className="text-sm font-medium line-clamp-2 leading-tight">
-                                {email.subject}
-                              </h4>
-                              
-                              {email.cta && (
-                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                  <Target className="h-3 w-3 flex-shrink-0" />
-                                  <span className="truncate">{email.cta}</span>
-                                </div>
                               )}
                             </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  
-                  {/* Timeline View */}
-                  <div className="border-t pt-6">
-                    <h4 className="text-sm font-semibold mb-4">Linha do Tempo Detalhada</h4>
-                    <div className="space-y-3">
-                      {selectedFunnel.emails.map((email, index) => {
-                        const nextEmail = selectedFunnel.emails[index + 1];
-                        const gap = nextEmail 
-                          ? Math.round((new Date(nextEmail.sentAt).getTime() - new Date(email.sentAt).getTime()) / (1000 * 60 * 60))
-                          : null;
-                        
-                        const fullEmail = mockEmails.find(e => e.id === email.id);
-                        
-                        const categoryColors = {
-                          onboarding: 'from-blue-500/10 to-blue-600/10 border-blue-500/30',
-                          educacao: 'from-green-500/10 to-green-600/10 border-green-500/30',
-                          promo: 'from-red-500/10 to-red-600/10 border-red-500/30',
-                          reengajamento: 'from-orange-500/10 to-orange-600/10 border-orange-500/30',
-                          sazonal: 'from-purple-500/10 to-purple-600/10 border-purple-500/30'
-                        };
-                        
-                        return (
-                          <div key={email.id}>
-                            <div className="flex gap-4">
-                              {/* Email Thumbnail */}
-                              <div className="w-48 flex-shrink-0">
-                                <div className="aspect-[3/4] rounded-lg overflow-hidden border-2 hover:border-primary transition-colors cursor-pointer"
-                                     onClick={() => {
-                                       if (fullEmail) setViewingEmail(fullEmail);
-                                     }}>
-                                  <EmailThumbnail
-                                    htmlContent={fullEmail?.htmlContent}
-                                    subject={email.subject}
-                                    onClick={() => {
-                                      if (fullEmail) setViewingEmail(fullEmail);
-                                    }}
-                                  />
-                                </div>
-                              </div>
-                              
-                              {/* Email Details Card */}
-                              <div className="flex-1">
-                                <Card className={`bg-gradient-to-br ${categoryColors[email.category as keyof typeof categoryColors]} border-2 transition-all hover:shadow-lg h-full`}>
-                                  <CardHeader className="pb-3">
-                                    <div className="flex items-start justify-between gap-2">
-                                      <div className="space-y-2 flex-1">
-                                        <div className="flex items-center gap-2 flex-wrap">
-                                          <Badge variant="outline" className="font-bold">D+{email.dayOffset ?? 0}</Badge>
-                                          <EmailCategoryBadge category={email.category} />
-                                          {email.cta && (
-                                            <Badge variant="secondary" className="text-xs">
-                                              <Target className="h-3 w-3 mr-1" />
-                                              CTA
-                                            </Badge>
-                                          )}
-                                        </div>
-                                        <p className="font-semibold text-base leading-tight">{email.subject}</p>
-                                        {email.cta && (
-                                          <div className="flex items-center gap-2 text-sm">
-                                            <Target className="h-3.5 w-3.5 text-primary" />
-                                            <span className="text-muted-foreground font-medium">{email.cta}</span>
-                                          </div>
-                                        )}
-                                      </div>
-                                      <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        className="h-8 w-8 p-0"
-                                        onClick={() => {
-                                          if (fullEmail) setViewingEmail(fullEmail);
-                                        }}
-                                      >
-                                        <Eye className="h-4 w-4" />
-                                      </Button>
-                                    </div>
-                                  </CardHeader>
-                                  <CardContent className="pt-0">
-                                    <p className="text-xs text-muted-foreground">
-                                      {new Date(email.sentAt).toLocaleString('pt-BR')}
-                                    </p>
-                                  </CardContent>
-                                </Card>
-                              </div>
-                            </div>
                             
-                            {gap !== null && (
-                              <div className="flex items-center justify-center py-3">
-                                <Badge variant="outline" className="text-xs font-medium">
-                                  +{gap}h
-                                </Badge>
-                              </div>
+                            <h4 className="text-sm font-medium line-clamp-2 leading-tight">
+                              {email.subject}
+                            </h4>
+                            
+                            <p className="text-xs text-muted-foreground">
+                              {format(new Date(email.received_at), "dd MMM HH:mm", { locale: ptBR })}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Detailed Timeline List */}
+                {funnelEmails && funnelEmails.length > 0 && (
+                  <div className="border-t pt-6">
+                    <h4 className="font-semibold mb-4">Detalhes da Sequência</h4>
+                    <div className="space-y-3">
+                      {funnelEmails.map((email, index) => {
+                        const prevEmail = funnelEmails[index - 1];
+                        const hoursSincePrev = prevEmail
+                          ? differenceInHours(new Date(email.received_at), new Date(prevEmail.received_at))
+                          : 0;
+
+                        return (
+                          <div 
+                            key={email.id}
+                            className="flex items-center gap-4 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors"
+                            onClick={() => setViewingEmail(convertToEmail(email))}
+                          >
+                            <div 
+                              className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
+                              style={{ backgroundColor: selectedFunnel.color }}
+                            >
+                              {index + 1}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium truncate">{email.subject}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {format(new Date(email.received_at), "dd MMM yyyy 'às' HH:mm", { locale: ptBR })}
+                              </p>
+                            </div>
+                            {index > 0 && (
+                              <Badge variant="outline" className="flex-shrink-0">
+                                +{hoursSincePrev}h
+                              </Badge>
                             )}
                           </div>
                         );
                       })}
                     </div>
                   </div>
-                </TabsContent>
-
-                <TabsContent value="stats" className="space-y-4 mt-6">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Resumo de Cadência</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid grid-cols-3 gap-4">
-                        <div>
-                          <p className="text-sm text-muted-foreground">Gap Médio</p>
-                          <p className="text-2xl font-bold">{selectedFunnel.cadenceSummary.avgGap}h</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">Mínimo</p>
-                          <p className="text-2xl font-bold">{selectedFunnel.cadenceSummary.min}h</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">Máximo</p>
-                          <p className="text-2xl font-bold">{selectedFunnel.cadenceSummary.max}h</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Categorias</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        {Object.entries(
-                          selectedFunnel.emails.reduce((acc, email) => {
-                            acc[email.category] = (acc[email.category] || 0) + 1;
-                            return acc;
-                          }, {} as Record<string, number>)
-                        ).map(([category, count]) => (
-                          <div key={category} className="flex items-center justify-between">
-                            <EmailCategoryBadge category={category as any} />
-                            <span className="text-sm text-muted-foreground">{count} e-mails</span>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-
-                <TabsContent value="insights" className="space-y-4 mt-6">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Insights de IA</CardTitle>
-                      <SheetDescription>
-                        Análises automáticas deste funil
-                      </SheetDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <ul className="space-y-3">
-                        {selectedFunnel.insights.map((insight, index) => (
-                          <li key={index} className="flex gap-2">
-                            <span className="text-primary">•</span>
-                            <span className="text-sm">{insight}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-              </Tabs>
+                )}
+              </div>
             </>
           )}
         </SheetContent>
       </Sheet>
 
-      {/* Comparison Sheet */}
-      <Sheet open={showComparison} onOpenChange={setShowComparison}>
-        <SheetContent className="w-full sm:max-w-4xl overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>Comparação de Funis</SheetTitle>
-            <SheetDescription>
-              Comparando {comparingFunnels.length} funis lado a lado
-            </SheetDescription>
-          </SheetHeader>
-
-          <div className="mt-6 space-y-6">
-            {/* Metrics Comparison */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Métricas</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-3 gap-4">
-                  {comparingFunnels.map(funnel => (
-                    <div key={funnel.id} className="space-y-3">
-                      <p className="font-medium truncate">{funnel.name}</p>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">E-mails:</span>
-                          <span className="font-medium">{funnel.emails.length}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Gap médio:</span>
-                          <span className="font-medium">{funnel.cadenceSummary.avgGap}h</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Duração:</span>
-                          <span className="font-medium">
-                            {getDuration(funnel.startDate, funnel.endDate)} dias
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Categories Comparison */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Categorias Predominantes</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-3 gap-4">
-                  {comparingFunnels.map(funnel => {
-                    const categories = funnel.emails.reduce((acc, email) => {
-                      acc[email.category] = (acc[email.category] || 0) + 1;
-                      return acc;
-                    }, {} as Record<string, number>);
-                    
-                    return (
-                      <div key={funnel.id} className="space-y-2">
-                        <p className="font-medium truncate text-sm">{funnel.name}</p>
-                        <div className="space-y-1">
-                          {Object.entries(categories)
-                            .sort(([, a], [, b]) => b - a)
-                            .slice(0, 3)
-                            .map(([category, count]) => (
-                              <div key={category} className="flex items-center gap-2">
-                                <EmailCategoryBadge category={category as any} />
-                                <span className="text-xs text-muted-foreground">({count})</span>
-                              </div>
-                            ))}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Key Insights */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Principais Insights</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-3 gap-4">
-                  {comparingFunnels.map(funnel => (
-                    <div key={funnel.id} className="space-y-2">
-                      <p className="font-medium truncate text-sm">{funnel.name}</p>
-                      <ul className="space-y-1">
-                        {funnel.insights.slice(0, 3).map((insight, index) => (
-                          <li key={index} className="text-xs text-muted-foreground flex gap-1">
-                            <span>•</span>
-                            <span>{insight}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </SheetContent>
-      </Sheet>
-
-      {/* Email Viewer */}
       <EmailViewer 
         email={viewingEmail}
         open={!!viewingEmail}
