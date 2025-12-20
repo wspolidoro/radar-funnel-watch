@@ -13,29 +13,21 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 export const AppNavbar = () => {
-  const { user, organization, logout } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
+
+  const userEmail = user?.email || '';
+  const userInitial = userEmail.charAt(0).toUpperCase() || 'U';
 
   return (
     <header className="h-16 border-b border-border bg-card flex items-center px-4 gap-4">
       <SidebarTrigger />
       
       <div className="flex-1 flex items-center justify-between">
-        {/* Organization switcher */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="gap-2">
-              <span className="font-medium">{organization?.name}</span>
-              <ChevronDown className="h-4 w-4 opacity-50" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-56">
-            <DropdownMenuLabel>Organizações</DropdownMenuLabel>
-            <DropdownMenuItem>
-              {organization?.name} <span className="ml-auto text-xs text-muted-foreground">{organization?.plan}</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {/* Organization name */}
+        <div className="flex items-center gap-2">
+          <span className="font-medium">RadarMail</span>
+        </div>
 
         {/* Actions */}
         <div className="flex items-center gap-2">
@@ -69,17 +61,16 @@ export const AppNavbar = () => {
               <Button variant="ghost" className="gap-2">
                 <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
                   <span className="text-sm font-medium text-primary">
-                    {user?.name.charAt(0).toUpperCase()}
+                    {userInitial}
                   </span>
                 </div>
-                <span className="hidden md:inline font-medium">{user?.name}</span>
+                <span className="hidden md:inline font-medium truncate max-w-[150px]">{userEmail}</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>
                 <div className="flex flex-col gap-1">
-                  <span>{user?.name}</span>
-                  <span className="text-xs text-muted-foreground font-normal">{user?.email}</span>
+                  <span className="truncate">{userEmail}</span>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
