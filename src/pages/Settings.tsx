@@ -14,6 +14,7 @@ import {
 import { EmailSeedManager } from '@/components/EmailSeedManager';
 import { ProfileSettings } from '@/components/ProfileSettings';
 import { DomainManager } from '@/components/DomainManager';
+import { AliasManagerSettings } from '@/components/settings/AliasManagerSettings';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -345,6 +346,8 @@ const Settings = () => {
         </TabsContent>
 
         <TabsContent value="seeds" className="space-y-4">
+          <AliasManagerSettings />
+
           <EmailSeedManager />
 
           <Card>
