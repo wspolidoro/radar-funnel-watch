@@ -1,18 +1,22 @@
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Inbox, Search, Filter, Mail, Calendar, User, Tag, ExternalLink, Loader2, RefreshCw, Sparkles } from 'lucide-react';
+import { Inbox, Search, Filter, Mail, Calendar, User, ExternalLink, Loader2, RefreshCw, Sparkles, Bell } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
+import { toast as sonnerToast } from 'sonner';
 import { ExportNewslettersButton } from '@/components/ExportNewslettersButton';
 import { QuickAliasGenerator } from '@/components/QuickAliasGenerator';
+import { OptinConfirmation } from '@/components/OptinConfirmation';
+import { ExportHTMLButton } from '@/components/ExportHTMLButton';
+import { AliasManager } from '@/components/AliasManager';
 
 interface CapturedNewsletter {
   id: string;
@@ -27,6 +31,11 @@ interface CapturedNewsletter {
   is_processed: boolean;
   category: string | null;
   created_at: string;
+  optin_status: string | null;
+  confirmation_link: string | null;
+  email_type: string | null;
+  links_count: number | null;
+  word_count: number | null;
   email_seeds?: {
     name: string;
     email: string;
@@ -46,12 +55,52 @@ const categoryLabels: Record<string, { label: string; color: string }> = {
 
 const CapturedNewsletters = () => {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [seedFilter, setSeedFilter] = useState<string>('all');
   const [selectedNewsletter, setSelectedNewsletter] = useState<CapturedNewsletter | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isCategorizing, setIsCategorizing] = useState(false);
+  const [showAliasManager, setShowAliasManager] = useState(false);
+
+  // Real-time subscription for new newsletters
+  useEffect(() => {
+    const channel = supabase
+      .channel('newsletters-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'captured_newsletters'
+        },
+        (payload) => {
+          const newEmail = payload.new as CapturedNewsletter;
+          
+          // Show toast notification
+          sonnerToast.success('Novo email recebido!', {
+            description: `${newEmail.from_name || newEmail.from_email}: ${newEmail.subject}`,
+            action: {
+              label: 'Ver',
+              onClick: () => {
+                setSelectedNewsletter(newEmail);
+                setIsDetailOpen(true);
+              },
+            },
+            duration: 10000,
+          });
+
+          // Invalidate query to refresh list
+          queryClient.invalidateQueries({ queryKey: ['captured-newsletters'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   const { data: newsletters, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['captured-newsletters', searchQuery, categoryFilter, seedFilter],
@@ -142,6 +191,16 @@ const CapturedNewsletters = () => {
     );
   };
 
+  const getOptinBadge = (status: string | null) => {
+    if (status === 'confirmed') {
+      return <Badge variant="default" className="bg-success text-success-foreground">Confirmado</Badge>;
+    }
+    if (status === 'needs_confirmation') {
+      return <Badge variant="secondary" className="bg-warning text-warning-foreground">Aguarda Opt-in</Badge>;
+    }
+    return null;
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -177,8 +236,35 @@ const CapturedNewsletters = () => {
         </div>
       </div>
 
-      {/* Quick Alias Generator */}
-      <QuickAliasGenerator onAliasCreated={() => refetch()} />
+      {/* Quick Alias Generator or Alias Manager Toggle */}
+      <div className="flex gap-4">
+        <Button 
+          variant={!showAliasManager ? 'default' : 'outline'}
+          onClick={() => setShowAliasManager(false)}
+          size="sm"
+        >
+          Criação Rápida
+        </Button>
+        <Button 
+          variant={showAliasManager ? 'default' : 'outline'}
+          onClick={() => setShowAliasManager(true)}
+          size="sm"
+        >
+          Gerenciar Aliases
+        </Button>
+      </div>
+
+      {showAliasManager ? (
+        <AliasManager />
+      ) : (
+        <QuickAliasGenerator onAliasCreated={() => refetch()} />
+      )}
+
+      {/* Realtime indicator */}
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Bell className="w-4 h-4 animate-pulse text-success" />
+        <span>Monitoramento em tempo real ativo</span>
+      </div>
 
       {/* Filters */}
       <Card>
@@ -237,16 +323,20 @@ const CapturedNewsletters = () => {
               <CardContent className="py-4">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
                       {getCategoryBadge(newsletter.category)}
+                      {getOptinBadge(newsletter.optin_status)}
+                      {newsletter.email_type && (
+                        <Badge variant="outline">{newsletter.email_type}</Badge>
+                      )}
                       {newsletter.is_processed && (
-                        <Badge variant="outline" className="text-green-600 border-green-600">
+                        <Badge variant="outline" className="text-success border-success">
                           Processado
                         </Badge>
                       )}
                     </div>
                     <h3 className="font-semibold text-lg truncate">{newsletter.subject}</h3>
-                    <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground flex-wrap">
                       <span className="flex items-center gap-1">
                         <User className="h-3 w-3" />
                         {newsletter.from_name || newsletter.from_email}
@@ -260,6 +350,9 @@ const CapturedNewsletters = () => {
                           <Mail className="h-3 w-3" />
                           {newsletter.email_seeds.name}
                         </span>
+                      )}
+                      {newsletter.links_count !== null && newsletter.links_count > 0 && (
+                        <span>{newsletter.links_count} links</span>
                       )}
                     </div>
                   </div>
@@ -297,6 +390,19 @@ const CapturedNewsletters = () => {
                 <SheetTitle className="text-xl">{selectedNewsletter.subject}</SheetTitle>
               </SheetHeader>
               <div className="mt-6 space-y-6">
+                {/* Opt-in Confirmation */}
+                {(selectedNewsletter.optin_status === 'needs_confirmation' || selectedNewsletter.confirmation_link) && (
+                  <div className="p-4 border rounded-lg bg-muted/50">
+                    <h4 className="font-medium mb-2">Status de Opt-in</h4>
+                    <OptinConfirmation
+                      newsletterId={selectedNewsletter.id}
+                      optinStatus={selectedNewsletter.optin_status}
+                      confirmationLink={selectedNewsletter.confirmation_link}
+                      onStatusChange={() => refetch()}
+                    />
+                  </div>
+                )}
+
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <p className="text-muted-foreground">De</p>
@@ -321,6 +427,26 @@ const CapturedNewsletters = () => {
                     <p className="text-muted-foreground">E-mail Seed</p>
                     <p className="font-medium">{selectedNewsletter.email_seeds?.name || 'N/A'}</p>
                   </div>
+                  {selectedNewsletter.email_type && (
+                    <div>
+                      <p className="text-muted-foreground">Tipo de Email</p>
+                      <p className="font-medium capitalize">{selectedNewsletter.email_type}</p>
+                    </div>
+                  )}
+                  {selectedNewsletter.links_count !== null && (
+                    <div>
+                      <p className="text-muted-foreground">Links</p>
+                      <p className="font-medium">{selectedNewsletter.links_count}</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Export HTML Button */}
+                <div className="flex gap-2">
+                  <ExportHTMLButton 
+                    htmlContent={selectedNewsletter.html_content} 
+                    subject={selectedNewsletter.subject}
+                  />
                 </div>
 
                 <div className="border-t pt-6">
