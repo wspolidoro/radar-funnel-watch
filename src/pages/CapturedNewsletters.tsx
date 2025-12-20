@@ -11,6 +11,8 @@ import { Inbox, Search, Filter, Mail, Calendar, User, Tag, ExternalLink, Loader2
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
+import { ExportNewslettersButton } from '@/components/ExportNewslettersButton';
+import { QuickAliasGenerator } from '@/components/QuickAliasGenerator';
 
 interface CapturedNewsletter {
   id: string;
@@ -153,6 +155,7 @@ const CapturedNewsletters = () => {
           </p>
         </div>
         <div className="flex gap-2">
+          <ExportNewslettersButton newsletters={newsletters} isLoading={isLoading} />
           <Button 
             variant="outline" 
             onClick={handleCategorizeAll}
@@ -173,6 +176,9 @@ const CapturedNewsletters = () => {
           </Button>
         </div>
       </div>
+
+      {/* Quick Alias Generator */}
+      <QuickAliasGenerator onAliasCreated={() => refetch()} />
 
       {/* Filters */}
       <Card>
