@@ -13,10 +13,9 @@ import { ptBR } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { toast as sonnerToast } from 'sonner';
 import { ExportNewslettersButton } from '@/components/ExportNewslettersButton';
-import { QuickAliasGenerator } from '@/components/QuickAliasGenerator';
 import { OptinConfirmation } from '@/components/OptinConfirmation';
 import { ExportHTMLButton } from '@/components/ExportHTMLButton';
-import { AliasManager } from '@/components/AliasManager';
+import { TrackingCreator } from '@/components/TrackingCreator';
 
 interface CapturedNewsletter {
   id: string;
@@ -62,7 +61,6 @@ const CapturedNewsletters = () => {
   const [selectedNewsletter, setSelectedNewsletter] = useState<CapturedNewsletter | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isCategorizing, setIsCategorizing] = useState(false);
-  const [showAliasManager, setShowAliasManager] = useState(false);
 
   // Real-time subscription for new newsletters
   useEffect(() => {
@@ -236,29 +234,8 @@ const CapturedNewsletters = () => {
         </div>
       </div>
 
-      {/* Quick Alias Generator or Alias Manager Toggle */}
-      <div className="flex gap-4">
-        <Button 
-          variant={!showAliasManager ? 'default' : 'outline'}
-          onClick={() => setShowAliasManager(false)}
-          size="sm"
-        >
-          Criação Rápida
-        </Button>
-        <Button 
-          variant={showAliasManager ? 'default' : 'outline'}
-          onClick={() => setShowAliasManager(true)}
-          size="sm"
-        >
-          Gerenciar Aliases
-        </Button>
-      </div>
-
-      {showAliasManager ? (
-        <AliasManager />
-      ) : (
-        <QuickAliasGenerator onAliasCreated={() => refetch()} />
-      )}
+      {/* Tracking Creator - Simplified */}
+      <TrackingCreator onTrackingCreated={() => refetch()} />
 
       {/* Realtime indicator */}
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
