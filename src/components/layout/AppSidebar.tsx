@@ -11,7 +11,8 @@ import {
   CreditCard,
   Blocks,
   Crown,
-  Shield
+  Shield,
+  AlertTriangle
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import {
@@ -44,6 +45,7 @@ const userMenuItems = [
 const saasAdminMenuItems = [
   { title: 'Métricas SaaS', url: '/admin/metrics', icon: BarChart3 },
   { title: 'Clientes', url: '/admin/clients', icon: Building2 },
+  { title: 'Alertas Vazamento', url: '/admin/alerts', icon: AlertTriangle },
   { title: 'Planos', url: '/admin/plans', icon: Crown },
   { title: 'Pagamentos', url: '/admin/payments', icon: CreditCard },
   { title: 'Integrações', url: '/admin/integrations', icon: Blocks },

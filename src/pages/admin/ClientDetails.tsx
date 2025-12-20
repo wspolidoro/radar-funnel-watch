@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
@@ -6,18 +6,19 @@ import {
   Crown, 
   CreditCard, 
   Calendar, 
-  Mail, 
-  User,
   CheckCircle,
-  XCircle,
   Clock,
   DollarSign,
   AlertTriangle,
   RefreshCw,
   Ban,
-  History
+  History,
+  ArrowUpCircle,
+  ArrowDownCircle,
+  Repeat
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -39,8 +40,24 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { RoleGuard } from '@/components/RoleGuard';
 import { format } from 'date-fns';
@@ -74,12 +91,28 @@ const paymentStatusLabels: Record<string, string> = {
   refunded: 'Reembolsado'
 };
 
+const changeTypeColors: Record<string, string> = {
+  upgrade: 'bg-green-500/10 text-green-700 border-green-500/20',
+  downgrade: 'bg-orange-500/10 text-orange-700 border-orange-500/20',
+  initial: 'bg-blue-500/10 text-blue-700 border-blue-500/20'
+};
+
+const changeTypeLabels: Record<string, string> = {
+  upgrade: 'Upgrade',
+  downgrade: 'Downgrade',
+  initial: 'Inicial'
+};
+
 export default function ClientDetails() {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showReactivateDialog, setShowReactivateDialog] = useState(false);
+  const [showChangePlanDialog, setShowChangePlanDialog] = useState(false);
+  const [selectedPlanId, setSelectedPlanId] = useState<string>('');
+  const [changeReason, setChangeReason] = useState('');
 
   // Fetch subscription details
   const { data: subscription, isLoading: loadingSubscription } = useQuery({
@@ -120,6 +153,21 @@ export default function ClientDetails() {
     enabled: !!userId
   });
 
+  // Fetch available plans
+  const { data: plans } = useQuery({
+    queryKey: ['available-plans'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('saas_plans')
+        .select('*')
+        .eq('is_active', true)
+        .order('price_monthly', { ascending: true });
+
+      if (error) throw error;
+      return data || [];
+    }
+  });
+
   // Fetch payment history
   const { data: payments, isLoading: loadingPayments } = useQuery({
     queryKey: ['client-payments', userId],
@@ -150,6 +198,28 @@ export default function ClientDetails() {
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(10);
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!userId
+  });
+
+  // Fetch plan change history
+  const { data: planChanges, isLoading: loadingPlanChanges } = useQuery({
+    queryKey: ['client-plan-changes', userId],
+    queryFn: async () => {
+      if (!userId) throw new Error('User ID not provided');
+      
+      const { data, error } = await supabase
+        .from('plan_change_history')
+        .select(`
+          *,
+          from_plan:from_plan_id(id, name, price_monthly),
+          to_plan:to_plan_id(id, name, price_monthly)
+        `)
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
       return data || [];
@@ -207,6 +277,60 @@ export default function ClientDetails() {
     }
   });
 
+  // Change plan mutation
+  const changePlanMutation = useMutation({
+    mutationFn: async () => {
+      if (!subscription?.id || !selectedPlanId || !userId) {
+        throw new Error('Missing required data');
+      }
+
+      const currentPlan = subscription.saas_plans as any;
+      const newPlan = plans?.find(p => p.id === selectedPlanId);
+      
+      if (!newPlan) throw new Error('Plan not found');
+
+      const currentPrice = Number(currentPlan?.price_monthly || 0);
+      const newPrice = Number(newPlan.price_monthly);
+      const changeType = newPrice > currentPrice ? 'upgrade' : newPrice < currentPrice ? 'downgrade' : 'upgrade';
+
+      // Update subscription
+      const { error: subError } = await supabase
+        .from('saas_subscriptions')
+        .update({ plan_id: selectedPlanId })
+        .eq('id', subscription.id);
+      
+      if (subError) throw subError;
+
+      // Record the change
+      const { error: historyError } = await supabase
+        .from('plan_change_history')
+        .insert({
+          user_id: userId,
+          subscription_id: subscription.id,
+          from_plan_id: currentPlan?.id || null,
+          to_plan_id: selectedPlanId,
+          change_type: changeType,
+          from_price: currentPrice,
+          to_price: newPrice,
+          reason: changeReason || null,
+          changed_by: user?.id || null
+        });
+
+      if (historyError) throw historyError;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['client-subscription', userId] });
+      queryClient.invalidateQueries({ queryKey: ['client-plan-changes', userId] });
+      toast.success('Plano alterado com sucesso');
+      setShowChangePlanDialog(false);
+      setSelectedPlanId('');
+      setChangeReason('');
+    },
+    onError: (error) => {
+      toast.error('Erro ao alterar plano: ' + error.message);
+    }
+  });
+
   const isLoading = loadingSubscription || loadingProfile || loadingPayments;
 
   // Calculate total paid
@@ -230,6 +354,8 @@ export default function ClientDetails() {
     );
   }
 
+  const currentPlanId = (subscription?.saas_plans as any)?.id;
+
   return (
     <RoleGuard requiredRole="adminsaas">
       <div className="space-y-6">
@@ -247,6 +373,12 @@ export default function ClientDetails() {
             </p>
           </div>
           <div className="flex gap-2">
+            {subscription && (
+              <Button variant="outline" onClick={() => setShowChangePlanDialog(true)}>
+                <Repeat className="h-4 w-4 mr-2" />
+                Alterar Plano
+              </Button>
+            )}
             {subscription?.status === 'active' ? (
               <Button variant="destructive" onClick={() => setShowCancelDialog(true)}>
                 <Ban className="h-4 w-4 mr-2" />
@@ -333,6 +465,82 @@ export default function ClientDetails() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Plan Change History */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <History className="h-5 w-5" />
+              Histórico de Mudanças de Plano
+            </CardTitle>
+            <CardDescription>
+              Todas as alterações de plano realizadas
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loadingPlanChanges ? (
+              <div className="space-y-2">
+                {[1, 2, 3].map(i => <Skeleton key={i} className="h-12" />)}
+              </div>
+            ) : planChanges && planChanges.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Data</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>De</TableHead>
+                    <TableHead>Para</TableHead>
+                    <TableHead>Diferença</TableHead>
+                    <TableHead>Motivo</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {planChanges.map((change: any) => {
+                    const priceDiff = Number(change.to_price || 0) - Number(change.from_price || 0);
+                    return (
+                      <TableRow key={change.id}>
+                        <TableCell className="text-muted-foreground">
+                          {format(new Date(change.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={changeTypeColors[change.change_type]}>
+                            {change.change_type === 'upgrade' ? (
+                              <ArrowUpCircle className="h-3 w-3 mr-1" />
+                            ) : change.change_type === 'downgrade' ? (
+                              <ArrowDownCircle className="h-3 w-3 mr-1" />
+                            ) : null}
+                            {changeTypeLabels[change.change_type] || change.change_type}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {change.from_plan?.name || '-'}
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {change.to_plan?.name || '-'}
+                        </TableCell>
+                        <TableCell className={priceDiff > 0 ? 'text-green-600' : priceDiff < 0 ? 'text-orange-600' : ''}>
+                          {priceDiff !== 0 ? (
+                            <>
+                              {priceDiff > 0 ? '+' : ''}R$ {priceDiff.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </>
+                          ) : '-'}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground max-w-[200px] truncate">
+                          {change.reason || '-'}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <History className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>Nenhuma mudança de plano registrada</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Payment History */}
         <Card>
@@ -496,6 +704,76 @@ export default function ClientDetails() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Change Plan Dialog */}
+        <Dialog open={showChangePlanDialog} onOpenChange={setShowChangePlanDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Alterar Plano</DialogTitle>
+              <DialogDescription>
+                Selecione o novo plano para o cliente. A mudança será registrada no histórico.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Novo Plano</Label>
+                <Select value={selectedPlanId} onValueChange={setSelectedPlanId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um plano" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {plans?.filter(p => p.id !== currentPlanId).map((plan) => (
+                      <SelectItem key={plan.id} value={plan.id}>
+                        <div className="flex items-center gap-2">
+                          <span>{plan.name}</span>
+                          <span className="text-muted-foreground">
+                            - R$ {Number(plan.price_monthly).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/mês
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Motivo da mudança (opcional)</Label>
+                <Textarea 
+                  value={changeReason}
+                  onChange={(e) => setChangeReason(e.target.value)}
+                  placeholder="Ex: Solicitação do cliente, promoção especial..."
+                  rows={3}
+                />
+              </div>
+
+              {selectedPlanId && (
+                <div className="p-3 bg-muted rounded-lg">
+                  <p className="text-sm">
+                    <strong>Plano atual:</strong> {(subscription?.saas_plans as any)?.name || 'Nenhum'} 
+                    {' '}- R$ {Number((subscription?.saas_plans as any)?.price_monthly || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/mês
+                  </p>
+                  <p className="text-sm mt-1">
+                    <strong>Novo plano:</strong> {plans?.find(p => p.id === selectedPlanId)?.name}
+                    {' '}- R$ {Number(plans?.find(p => p.id === selectedPlanId)?.price_monthly || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/mês
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowChangePlanDialog(false)}>
+                Cancelar
+              </Button>
+              <Button 
+                onClick={() => changePlanMutation.mutate()}
+                disabled={!selectedPlanId || changePlanMutation.isPending}
+              >
+                {changePlanMutation.isPending ? 'Alterando...' : 'Confirmar Alteração'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </RoleGuard>
   );

@@ -25,6 +25,7 @@ import AdminIntegrations from "./pages/admin/Integrations";
 import AdminClients from "./pages/admin/Clients";
 import AdminClientDetails from "./pages/admin/ClientDetails";
 import AdminSaasMetrics from "./pages/admin/SaasMetrics";
+import AdminDataLeakAlerts from "./pages/admin/DataLeakAlerts";
 
 const queryClient = new QueryClient();
 
@@ -79,6 +80,7 @@ const App = () => (
               <Route path="/admin/clients" element={<AdminClients />} />
               <Route path="/admin/clients/:userId" element={<AdminClientDetails />} />
               <Route path="/admin/metrics" element={<AdminSaasMetrics />} />
+              <Route path="/admin/alerts" element={<AdminDataLeakAlerts />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
