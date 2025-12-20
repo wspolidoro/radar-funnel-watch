@@ -6,7 +6,8 @@ import {
   FileText, 
   Settings,
   Building2,
-  Inbox
+  Inbox,
+  BarChart3
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import {
@@ -26,6 +27,7 @@ const menuItems = [
   { title: 'Remetentes', url: '/senders', icon: Users },
   { title: 'Biblioteca', url: '/library', icon: Library },
   { title: 'Newsletters', url: '/newsletters', icon: Inbox },
+  { title: 'Analytics', url: '/analytics', icon: BarChart3 },
   { title: 'Funis', url: '/funnels', icon: GitBranch },
   { title: 'Relatórios', url: '/reports', icon: FileText },
   { title: 'Clientes', url: '/clients', icon: Building2 },
