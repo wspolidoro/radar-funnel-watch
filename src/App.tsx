@@ -23,6 +23,7 @@ import Library from "./pages/Library";
 import Funnels from "./pages/Funnels";
 import Reports from "./pages/Reports";
 import NewReport from "./pages/NewReport";
+import NewTracking from "./pages/NewTracking";
 import Settings from "./pages/Settings";
 import CapturedNewsletters from "./pages/CapturedNewsletters";
 import Analytics from "./pages/Analytics";
@@ -91,6 +92,7 @@ const App = () => (
               <Route path="funnels" element={<Funnels />} />
               <Route path="reports" element={<Reports />} />
               <Route path="reports/new" element={<NewReport />} />
+              <Route path="tracking/new" element={<NewTracking />} />
               <Route path="alerts" element={<ClientAlerts />} />
               <Route path="settings" element={<Settings />} />
             </Route>
