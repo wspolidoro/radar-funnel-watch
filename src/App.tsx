@@ -22,6 +22,8 @@ import Analytics from "./pages/Analytics";
 import AdminPlans from "./pages/admin/Plans";
 import AdminPayments from "./pages/admin/Payments";
 import AdminIntegrations from "./pages/admin/Integrations";
+import AdminClients from "./pages/admin/Clients";
+import AdminSaasMetrics from "./pages/admin/SaasMetrics";
 
 const queryClient = new QueryClient();
 
@@ -73,6 +75,8 @@ const App = () => (
               <Route path="/admin/plans" element={<AdminPlans />} />
               <Route path="/admin/payments" element={<AdminPayments />} />
               <Route path="/admin/integrations" element={<AdminIntegrations />} />
+              <Route path="/admin/clients" element={<AdminClients />} />
+              <Route path="/admin/metrics" element={<AdminSaasMetrics />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
