@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_usage_log: {
+        Row: {
+          action: string
+          created_at: string
+          credits_used: number
+          id: string
+          model_used: string | null
+          tokens_input: number | null
+          tokens_output: number | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          credits_used?: number
+          id?: string
+          model_used?: string | null
+          tokens_input?: number | null
+          tokens_output?: number | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          credits_used?: number
+          id?: string
+          model_used?: string | null
+          tokens_input?: number | null
+          tokens_output?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       captured_newsletters: {
         Row: {
           alias_id: string | null
@@ -455,27 +488,36 @@ export type Database = {
       }
       profiles: {
         Row: {
+          ai_credits: number | null
           avatar_url: string | null
           created_at: string
           full_name: string | null
+          gpt_api_key: string | null
           id: string
           updated_at: string
+          use_own_gpt: boolean | null
           user_id: string
         }
         Insert: {
+          ai_credits?: number | null
           avatar_url?: string | null
           created_at?: string
           full_name?: string | null
+          gpt_api_key?: string | null
           id?: string
           updated_at?: string
+          use_own_gpt?: boolean | null
           user_id: string
         }
         Update: {
+          ai_credits?: number | null
           avatar_url?: string | null
           created_at?: string
           full_name?: string | null
+          gpt_api_key?: string | null
           id?: string
           updated_at?: string
+          use_own_gpt?: boolean | null
           user_id?: string
         }
         Relationships: []
