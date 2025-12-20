@@ -2,9 +2,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Mail, Users, Bell, CreditCard, Plug } from 'lucide-react';
+import { Mail, Users, Bell, CreditCard, Plug, User } from 'lucide-react';
 import { RoleGuard } from '@/components/RoleGuard';
 import { EmailSeedManager } from '@/components/EmailSeedManager';
+import { ProfileSettings } from '@/components/ProfileSettings';
 
 const Settings = () => {
   return (
@@ -16,8 +17,12 @@ const Settings = () => {
         </p>
       </div>
 
-      <Tabs defaultValue="seeds" className="space-y-6">
+      <Tabs defaultValue="profile" className="space-y-6">
         <TabsList>
+          <TabsTrigger value="profile" className="gap-2">
+            <User className="h-4 w-4" />
+            Perfil
+          </TabsTrigger>
           <TabsTrigger value="seeds" className="gap-2">
             <Mail className="h-4 w-4" />
             Seeds & Integrações
@@ -35,6 +40,10 @@ const Settings = () => {
             Plano & Faturamento
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="profile" className="space-y-4">
+          <ProfileSettings />
+        </TabsContent>
 
         <TabsContent value="seeds" className="space-y-4">
           <EmailSeedManager />

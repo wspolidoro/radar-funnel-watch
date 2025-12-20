@@ -1,4 +1,4 @@
-import { Bell, Plus, ChevronDown } from 'lucide-react';
+import { Bell, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -8,16 +8,20 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useAuth } from '@/contexts/AuthContext';
+import { useProfile } from '@/hooks/useProfile';
 import { useNavigate } from 'react-router-dom';
 
 export const AppNavbar = () => {
   const { user, logout } = useAuth();
+  const { profile } = useProfile();
   const navigate = useNavigate();
 
   const userEmail = user?.email || '';
-  const userInitial = userEmail.charAt(0).toUpperCase() || 'U';
+  const displayName = profile?.full_name || userEmail;
+  const userInitial = (profile?.full_name?.charAt(0) || userEmail.charAt(0) || 'U').toUpperCase();
 
   return (
     <header className="h-16 border-b border-border bg-card flex items-center px-4 gap-4">
@@ -59,18 +63,20 @@ export const AppNavbar = () => {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="gap-2">
-                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                  <span className="text-sm font-medium text-primary">
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={profile?.avatar_url || undefined} />
+                  <AvatarFallback className="bg-primary/10 text-primary text-sm">
                     {userInitial}
-                  </span>
-                </div>
-                <span className="hidden md:inline font-medium truncate max-w-[150px]">{userEmail}</span>
+                  </AvatarFallback>
+                </Avatar>
+                <span className="hidden md:inline font-medium truncate max-w-[150px]">{displayName}</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>
                 <div className="flex flex-col gap-1">
-                  <span className="truncate">{userEmail}</span>
+                  {profile?.full_name && <span>{profile.full_name}</span>}
+                  <span className="truncate text-muted-foreground text-xs">{userEmail}</span>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
