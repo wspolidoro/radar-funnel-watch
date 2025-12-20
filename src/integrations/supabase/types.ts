@@ -329,6 +329,70 @@ export type Database = {
         }
         Relationships: []
       }
+      plan_change_history: {
+        Row: {
+          change_type: string
+          changed_by: string | null
+          created_at: string
+          from_plan_id: string | null
+          from_price: number | null
+          id: string
+          reason: string | null
+          subscription_id: string | null
+          to_plan_id: string | null
+          to_price: number | null
+          user_id: string
+        }
+        Insert: {
+          change_type?: string
+          changed_by?: string | null
+          created_at?: string
+          from_plan_id?: string | null
+          from_price?: number | null
+          id?: string
+          reason?: string | null
+          subscription_id?: string | null
+          to_plan_id?: string | null
+          to_price?: number | null
+          user_id: string
+        }
+        Update: {
+          change_type?: string
+          changed_by?: string | null
+          created_at?: string
+          from_plan_id?: string | null
+          from_price?: number | null
+          id?: string
+          reason?: string | null
+          subscription_id?: string | null
+          to_plan_id?: string | null
+          to_price?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_change_history_from_plan_id_fkey"
+            columns: ["from_plan_id"]
+            isOneToOne: false
+            referencedRelation: "saas_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_change_history_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "saas_subscriptions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_change_history_to_plan_id_fkey"
+            columns: ["to_plan_id"]
+            isOneToOne: false
+            referencedRelation: "saas_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
