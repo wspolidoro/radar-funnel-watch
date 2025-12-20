@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { 
   Search, 
@@ -9,9 +9,12 @@ import {
   AlertTriangle,
   Inbox,
   Filter,
-  ShieldAlert
+  ShieldAlert,
+  Bell,
+  Loader2
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import type { DetectedSender } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,7 +36,7 @@ import {
   SelectValue 
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { DetectedSenderCard } from '@/components/DetectedSenderCard';
 
 const categoryLabels: Record<string, string> = {
@@ -65,10 +68,45 @@ const checkDomainMismatch = (senderEmail: string, aliasName: string): boolean =>
 
 export default function Senders() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('todas');
   const [aliasFilter, setAliasFilter] = useState('todos');
   const [leakFilter, setLeakFilter] = useState('todos');
+
+  // Mutation para notificar vazamento
+  const notifyLeakMutation = useMutation({
+    mutationFn: async (sender: DetectedSender) => {
+      if (!user?.email) throw new Error('Usuário não autenticado');
+      
+      const aliasName = sender.aliasNames[0] || 'unknown';
+      const senderDomain = sender.fromEmail.split('@')[1] || '';
+      
+      const { data, error } = await supabase.functions.invoke('notify-data-leak', {
+        body: {
+          userId: user.id,
+          userEmail: user.email,
+          aliasId: sender.aliasIds[0] || null,
+          aliasName,
+          newsletterId: null,
+          fromEmail: sender.fromEmail,
+          expectedDomain: aliasName.toLowerCase() + '.com',
+          actualDomain: senderDomain,
+          subject: `Remetente suspeito: ${sender.fromName || sender.fromEmail}`,
+          severity: sender.aliasIds.length > 1 ? 'critical' : 'warning'
+        }
+      });
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      toast.success('Alerta de vazamento enviado para seu email');
+    },
+    onError: (error) => {
+      toast.error('Erro ao enviar notificação: ' + error.message);
+    }
+  });
 
   // Buscar aliases do usuário
   const { data: aliases } = useQuery({
@@ -218,7 +256,7 @@ export default function Senders() {
 
   const handleExport = () => {
     if (!filteredSenders.length) {
-      toast({ title: 'Nenhum dado para exportar', variant: 'destructive' });
+      toast.error('Nenhum dado para exportar');
       return;
     }
 
@@ -233,7 +271,7 @@ export default function Senders() {
     a.href = url;
     a.download = `remetentes-${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
-    toast({ title: 'Exportação concluída' });
+    toast.success('Exportação concluída');
   };
 
   const formatDate = (dateString?: string) => {

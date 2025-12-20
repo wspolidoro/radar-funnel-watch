@@ -17,3 +17,6 @@ verify_jwt = true
 
 [functions.chat-insights]
 verify_jwt = true
+
+[functions.notify-data-leak]
+verify_jwt = true
