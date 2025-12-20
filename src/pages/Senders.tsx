@@ -455,9 +455,26 @@ export default function Senders() {
                       </TableCell>
                       <TableCell className="text-sm">{formatDate(sender.lastEmailAt)}</TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" onClick={() => handleViewDetails(sender)}>
-                          <Eye className="h-4 w-4" />
-                        </Button>
+                        <div className="flex justify-end gap-1">
+                          {sender.isUnexpected && (
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => notifyLeakMutation.mutate(sender)}
+                              disabled={notifyLeakMutation.isPending}
+                              title="Enviar alerta de vazamento por email"
+                            >
+                              {notifyLeakMutation.isPending ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Bell className="h-4 w-4 text-yellow-600" />
+                              )}
+                            </Button>
+                          )}
+                          <Button variant="ghost" size="sm" onClick={() => handleViewDetails(sender)}>
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

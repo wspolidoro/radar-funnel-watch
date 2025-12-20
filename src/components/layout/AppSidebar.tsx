@@ -42,7 +42,8 @@ const userMenuItems = [
 
 // Additional menu items for SaaS admin (adminsaas role)
 const saasAdminMenuItems = [
-  { title: 'Clientes', url: '/clients', icon: Building2 },
+  { title: 'Métricas SaaS', url: '/admin/metrics', icon: BarChart3 },
+  { title: 'Clientes', url: '/admin/clients', icon: Building2 },
   { title: 'Planos', url: '/admin/plans', icon: Crown },
   { title: 'Pagamentos', url: '/admin/payments', icon: CreditCard },
   { title: 'Integrações', url: '/admin/integrations', icon: Blocks },
