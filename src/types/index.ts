@@ -15,14 +15,15 @@ export interface Organization {
   plan: 'basic' | 'pro' | 'enterprise';
 }
 
-export type CompetitorStatus = 'active' | 'paused' | 'error';
+export type SenderStatus = 'active' | 'paused' | 'error';
 
-export interface Competitor {
+// Remetente - representa uma fonte de emails/newsletters que está sendo rastreada
+export interface Sender {
   id: string;
   name: string;
   website: string;
   mainDomain: string;
-  status: CompetitorStatus;
+  status: SenderStatus;
   emailsLast30d: number;
   activeFunnels: number;
   createdAt: string;
@@ -33,6 +34,10 @@ export interface Competitor {
   sparklineData?: number[];
   insights?: string[];
 }
+
+// Alias para retrocompatibilidade
+export type CompetitorStatus = SenderStatus;
+export type Competitor = Sender;
 
 export type SeedProvider = 'mailgun' | 'sendgrid' | 'gmail' | 'outlook';
 export type SeedStatus = 'active' | 'inactive' | 'error';
@@ -45,15 +50,21 @@ export interface SeedInbox {
   createdAt: string;
 }
 
-export interface Subscription {
+// Rastreamento - representa uma assinatura/inscrição em uma lista de emails
+export interface Tracking {
   id: string;
-  competitorId: string;
+  senderId: string;
   seedId: string;
   captureUrl: string;
   labels: string[];
   status: 'active' | 'paused';
   createdAt: string;
+  // Alias para retrocompatibilidade
+  competitorId?: string;
 }
+
+// Alias para retrocompatibilidade
+export type Subscription = Tracking;
 
 export type EmailCategory = 'onboarding' | 'promo' | 'educacao' | 'reengajamento' | 'sazonal';
 
@@ -168,7 +179,7 @@ export interface Client {
   status: ClientStatus;
   criadoEm: string;
   uso: {
-    concorrentes: number;
+    remetentes: number;
     emails: number;
     relatorios: number;
   };
@@ -180,7 +191,7 @@ export interface Client {
 }
 
 export interface DashboardKPIs {
-  competitorsMonitored: number;
+  sendersMonitored: number;
   newEmailsLast7d: number;
   funnelsDetected: number;
   avgIntervalHours: number;

@@ -2,12 +2,12 @@ import { TrendingUp, Activity, Clock, Zap } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import type { Competitor } from '@/types';
+import type { Sender } from '@/types';
 import { SparklineChart } from './SparklineChart';
 
-interface CompetitorCardProps {
-  competitor: Competitor;
-  onViewDetails: (competitor: Competitor) => void;
+interface SenderCardProps {
+  sender: Sender;
+  onViewDetails: (sender: Sender) => void;
 }
 
 const statusColors = {
@@ -22,7 +22,7 @@ const statusLabels = {
   error: 'Erro'
 };
 
-export const CompetitorCard = ({ competitor, onViewDetails }: CompetitorCardProps) => {
+export const SenderCard = ({ sender, onViewDetails }: SenderCardProps) => {
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
@@ -35,18 +35,18 @@ export const CompetitorCard = ({ competitor, onViewDetails }: CompetitorCardProp
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <CardTitle className="text-lg flex items-center gap-2">
-              {competitor.name}
-              {competitor.hasNewActivity && (
+              {sender.name}
+              {sender.hasNewActivity && (
                 <Badge variant="outline" className="bg-blue-500/10 text-blue-700 border-blue-500/20 text-xs">
                   <Zap className="h-3 w-3 mr-1" />
                   Novidade
                 </Badge>
               )}
             </CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">{competitor.mainDomain}</p>
+            <p className="text-sm text-muted-foreground mt-1">{sender.mainDomain}</p>
           </div>
-          <Badge variant="outline" className={statusColors[competitor.status]}>
-            {statusLabels[competitor.status]}
+          <Badge variant="outline" className={statusColors[sender.status]}>
+            {statusLabels[sender.status]}
           </Badge>
         </div>
       </CardHeader>
@@ -58,43 +58,43 @@ export const CompetitorCard = ({ competitor, onViewDetails }: CompetitorCardProp
               <TrendingUp className="h-3 w-3" />
               <span className="text-xs">Funis</span>
             </div>
-            <p className="text-2xl font-bold">{competitor.activeFunnels}</p>
+            <p className="text-2xl font-bold">{sender.activeFunnels}</p>
           </div>
           <div className="space-y-1">
             <div className="flex items-center gap-1 text-muted-foreground">
               <Activity className="h-3 w-3" />
               <span className="text-xs">E-mails 30d</span>
             </div>
-            <p className="text-2xl font-bold">{competitor.emailsLast30d}</p>
+            <p className="text-2xl font-bold">{sender.emailsLast30d}</p>
           </div>
           <div className="space-y-1">
             <div className="flex items-center gap-1 text-muted-foreground">
               <Clock className="h-3 w-3" />
               <span className="text-xs">Intervalo</span>
             </div>
-            <p className="text-2xl font-bold">{competitor.avgIntervalHours || 0}h</p>
+            <p className="text-2xl font-bold">{sender.avgIntervalHours || 0}h</p>
           </div>
         </div>
 
         {/* Sparkline */}
-        {competitor.sparklineData && competitor.sparklineData.length > 0 && (
+        {sender.sparklineData && sender.sparklineData.length > 0 && (
           <div className="space-y-1">
             <p className="text-xs text-muted-foreground">Atividade nos últimos 30 dias</p>
-            <SparklineChart data={competitor.sparklineData} />
+            <SparklineChart data={sender.sparklineData} />
           </div>
         )}
 
         {/* Last Email */}
         <div className="pt-2 border-t">
           <p className="text-xs text-muted-foreground mb-1">Último envio</p>
-          <p className="text-sm font-medium">{formatDate(competitor.lastEmailAt)}</p>
+          <p className="text-sm font-medium">{formatDate(sender.lastEmailAt)}</p>
         </div>
 
         {/* Action Button */}
         <Button 
           variant="outline" 
           className="w-full"
-          onClick={() => onViewDetails(competitor)}
+          onClick={() => onViewDetails(sender)}
         >
           Ver detalhes
         </Button>

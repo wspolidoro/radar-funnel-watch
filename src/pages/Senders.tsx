@@ -18,7 +18,7 @@ import {
   Clock
 } from 'lucide-react';
 import { competitorService, subscriptionService, funnelService } from '@/services/api';
-import type { Competitor } from '@/types';
+import type { Sender } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -49,11 +49,11 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
-import { CompetitorCard } from '@/components/CompetitorCard';
+import { SenderCard } from '@/components/SenderCard';
 import { SparklineChart } from '@/components/SparklineChart';
 import { Separator } from '@/components/ui/separator';
 import { useNavigate } from 'react-router-dom';
-import { NewCompetitorForm } from '@/components/NewCompetitorForm';
+import { NewSenderForm } from '@/components/NewSenderForm';
 
 const statusColors = {
   active: 'bg-green-500/10 text-green-700 border-green-500/20',
@@ -67,17 +67,17 @@ const statusLabels = {
   error: 'Erro'
 };
 
-export default function Competitors() {
+export default function Senders() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('todos');
   const [showNewActivity, setShowNewActivity] = useState(false);
-  const [selectedCompetitor, setSelectedCompetitor] = useState<Competitor | null>(null);
+  const [selectedSender, setSelectedSender] = useState<Sender | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [selectedForComparison, setSelectedForComparison] = useState<string[]>([]);
   const [isComparisonOpen, setIsComparisonOpen] = useState(false);
-  const [isNewCompetitorOpen, setIsNewCompetitorOpen] = useState(false);
+  const [isNewSenderOpen, setIsNewSenderOpen] = useState(false);
 
   const { data: competitorsData, isLoading } = useQuery({
     queryKey: ['competitors', search],
@@ -85,15 +85,15 @@ export default function Competitors() {
   });
 
   const { data: subscriptionsData } = useQuery({
-    queryKey: ['subscriptions', selectedCompetitor?.id],
-    queryFn: () => selectedCompetitor ? subscriptionService.list(selectedCompetitor.id) : Promise.resolve([]),
-    enabled: !!selectedCompetitor
+    queryKey: ['subscriptions', selectedSender?.id],
+    queryFn: () => selectedSender ? subscriptionService.list(selectedSender.id) : Promise.resolve([]),
+    enabled: !!selectedSender
   });
 
   const { data: funnelsData } = useQuery({
-    queryKey: ['funnels', selectedCompetitor?.id],
-    queryFn: () => selectedCompetitor ? funnelService.list({ competitorId: selectedCompetitor.id }) : Promise.resolve([]),
-    enabled: !!selectedCompetitor
+    queryKey: ['funnels', selectedSender?.id],
+    queryFn: () => selectedSender ? funnelService.list({ competitorId: selectedSender.id }) : Promise.resolve([]),
+    enabled: !!selectedSender
   });
 
   const toggleStatusMutation = useMutation({
@@ -156,8 +156,8 @@ export default function Competitors() {
       .slice(0, 3);
   }, [filteredCompetitors]);
 
-  const handleViewDetails = (competitor: Competitor) => {
-    setSelectedCompetitor(competitor);
+  const handleViewDetails = (sender: Sender) => {
+    setSelectedSender(sender);
     setIsDetailsOpen(true);
   };
 
@@ -220,9 +220,9 @@ export default function Competitors() {
             <Download className="h-4 w-4" />
             Exportar
           </Button>
-          <Button onClick={() => setIsNewCompetitorOpen(true)}>
+          <Button onClick={() => setIsNewSenderOpen(true)}>
             <Plus className="h-4 w-4" />
-            Novo Concorrente
+            Novo Remetente
           </Button>
         </div>
       </div>
@@ -323,9 +323,9 @@ export default function Competitors() {
                 : 'Nenhum concorrente cadastrado. Clique em "Novo Concorrente" para começar.'}
             </p>
             {!search && statusFilter === 'todos' && !showNewActivity && (
-              <Button onClick={() => setIsNewCompetitorOpen(true)}>
+              <Button onClick={() => setIsNewSenderOpen(true)}>
                 <Plus className="h-4 w-4" />
-                Novo Concorrente
+                Novo Remetente
               </Button>
             )}
           </CardContent>
@@ -340,10 +340,10 @@ export default function Competitors() {
                 Mais Ativos
               </h2>
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {topCompetitors.map((competitor) => (
-                  <CompetitorCard
-                    key={competitor.id}
-                    competitor={competitor}
+                {topCompetitors.map((sender) => (
+                  <SenderCard
+                    key={sender.id}
+                    sender={sender}
                     onViewDetails={handleViewDetails}
                   />
                 ))}
@@ -734,25 +734,25 @@ export default function Competitors() {
       </Sheet>
 
       {/* New Competitor Sheet */}
-      <Sheet open={isNewCompetitorOpen} onOpenChange={setIsNewCompetitorOpen}>
+      <Sheet open={isNewSenderOpen} onOpenChange={setIsNewSenderOpen}>
         <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
           <SheetHeader>
-            <SheetTitle>Novo Concorrente</SheetTitle>
+            <SheetTitle>Novo Remetente</SheetTitle>
             <SheetDescription>
-              Preencha os dados para iniciar o monitoramento de um novo concorrente
+              Preencha os dados para iniciar o monitoramento de um novo remetente
             </SheetDescription>
           </SheetHeader>
           <div className="mt-6">
-            <NewCompetitorForm 
+            <NewSenderForm 
               onSubmit={(data) => {
                 toast({
-                  title: 'Concorrente cadastrado!',
+                  title: 'Remetente cadastrado!',
                   description: `${data.name} foi adicionado com sucesso.`,
                 });
-                setIsNewCompetitorOpen(false);
+                setIsNewSenderOpen(false);
                 queryClient.invalidateQueries({ queryKey: ['competitors'] });
               }}
-              onCancel={() => setIsNewCompetitorOpen(false)}
+              onCancel={() => setIsNewSenderOpen(false)}
             />
           </div>
         </SheetContent>

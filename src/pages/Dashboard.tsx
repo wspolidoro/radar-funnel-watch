@@ -226,12 +226,12 @@ const Dashboard = () => {
         <Card className="gradient-card">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">
-              Concorrentes Monitorados
+              Remetentes Monitorados
             </CardTitle>
             <TrendingUp className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{kpis?.competitorsMonitored || 0}</div>
+            <div className="text-3xl font-bold">{kpis?.sendersMonitored || 0}</div>
           </CardContent>
         </Card>
 
@@ -419,15 +419,15 @@ const Dashboard = () => {
       </Card>
 
       {/* Empty state hint */}
-      {totalNewsletters === 0 && kpis && kpis.competitorsMonitored === 0 && (
+      {totalNewsletters === 0 && kpis && kpis.sendersMonitored === 0 && (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <TrendingUp className="h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">
-              Comece adicionando concorrentes
+              Comece adicionando remetentes
             </h3>
             <p className="text-sm text-muted-foreground mb-4 max-w-md">
-              Adicione seus concorrentes e conecte seu e-mail seed para começar a monitorar campanhas de email marketing.
+              Adicione remetentes e conecte seu e-mail seed para começar a monitorar campanhas de email marketing.
             </p>
             <Button onClick={() => navigate('/onboarding')}>
               Iniciar Configuração

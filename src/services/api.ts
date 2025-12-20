@@ -104,20 +104,22 @@ export const seedService = {
   }
 };
 
-// Subscriptions
+// Subscriptions / Trackings
 export const subscriptionService = {
-  async list(competitorId?: string): Promise<Subscription[]> {
+  async list(senderId?: string): Promise<Subscription[]> {
     await delay(200);
-    return competitorId
-      ? mockSubscriptions.filter(s => s.competitorId === competitorId)
+    return senderId
+      ? mockSubscriptions.filter(s => s.senderId === senderId || s.competitorId === senderId)
       : mockSubscriptions;
   },
 
   async create(data: Partial<Subscription>): Promise<Subscription> {
     await delay(400);
+    const senderId = data.senderId || data.competitorId || '';
     const newSub: Subscription = {
       id: `sub-${Date.now()}`,
-      competitorId: data.competitorId || '',
+      senderId: senderId,
+      competitorId: senderId,
       seedId: data.seedId || '',
       captureUrl: data.captureUrl || '',
       labels: data.labels || [],
@@ -349,7 +351,7 @@ export const clientService = {
       status: data.status || 'teste',
       criadoEm: new Date().toISOString(),
       uso: {
-        concorrentes: 0,
+        remetentes: 0,
         emails: 0,
         relatorios: 0
       },
