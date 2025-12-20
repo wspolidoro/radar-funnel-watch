@@ -11,6 +11,7 @@ import SenderDetails from "./pages/SenderDetails";
 import Library from "./pages/Library";
 import Funnels from "./pages/Funnels";
 import Reports from "./pages/Reports";
+import NewReport from "./pages/NewReport";
 import Settings from "./pages/Settings";
 import Clients from "./pages/Clients";
 import Onboarding from "./pages/Onboarding";
@@ -69,6 +70,7 @@ const App = () => (
               <Route path="/library" element={<Library />} />
               <Route path="/funnels" element={<Funnels />} />
               <Route path="/reports" element={<Reports />} />
+              <Route path="/reports/new" element={<NewReport />} />
               <Route path="/clients" element={<Clients />} />
               <Route path="/newsletters" element={<CapturedNewsletters />} />
               <Route path="/analytics" element={<Analytics />} />
