@@ -40,11 +40,11 @@ export const AppNavbar = () => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => navigate('/competitors/new')}>
-                Novo Concorrente
-              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => navigate('/reports/new')}>
                 Novo Relatório
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate('/tracking/new')}>
+                Novo Acompanhamento
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
