@@ -447,21 +447,21 @@ export default function Senders() {
       {/* Details Sheet */}
       <Sheet open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
         <SheetContent className="w-full sm:max-w-3xl overflow-y-auto">
-          {selectedCompetitor && (
+          {selectedSender && (
             <>
               <SheetHeader>
                 <div className="flex items-center gap-4 mb-4">
                   <div className="h-16 w-16 rounded-lg bg-primary/10 flex items-center justify-center">
                     <span className="text-2xl font-bold text-primary">
-                      {selectedCompetitor.name.charAt(0)}
+                      {selectedSender.name.charAt(0)}
                     </span>
                   </div>
                   <div className="flex-1">
-                    <SheetTitle className="text-2xl">{selectedCompetitor.name}</SheetTitle>
-                    <SheetDescription>{selectedCompetitor.mainDomain}</SheetDescription>
+                    <SheetTitle className="text-2xl">{selectedSender.name}</SheetTitle>
+                    <SheetDescription>{selectedSender.mainDomain}</SheetDescription>
                   </div>
-                  <Badge variant="outline" className={statusColors[selectedCompetitor.status]}>
-                    {statusLabels[selectedCompetitor.status]}
+                  <Badge variant="outline" className={statusColors[selectedSender.status]}>
+                    {statusLabels[selectedSender.status]}
                   </Badge>
                 </div>
               </SheetHeader>
@@ -484,7 +484,7 @@ export default function Senders() {
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <p className="text-3xl font-bold">{selectedCompetitor.emailsLast30d}</p>
+                        <p className="text-3xl font-bold">{selectedSender.emailsLast30d}</p>
                       </CardContent>
                     </Card>
                     <Card>
@@ -495,7 +495,7 @@ export default function Senders() {
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <p className="text-3xl font-bold">{selectedCompetitor.activeFunnels}</p>
+                        <p className="text-3xl font-bold">{selectedSender.activeFunnels}</p>
                       </CardContent>
                     </Card>
                     <Card>
@@ -506,7 +506,7 @@ export default function Senders() {
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <p className="text-3xl font-bold">{selectedCompetitor.avgIntervalHours || 0}h</p>
+                        <p className="text-3xl font-bold">{selectedSender.avgIntervalHours || 0}h</p>
                       </CardContent>
                     </Card>
                     <Card>
@@ -518,19 +518,19 @@ export default function Senders() {
                       </CardHeader>
                       <CardContent>
                         <p className="text-lg font-medium">
-                          {formatDate(selectedCompetitor.lastEmailAt)}
+                          {formatDate(selectedSender.lastEmailAt)}
                         </p>
                       </CardContent>
                     </Card>
                   </div>
 
-                  {selectedCompetitor.sparklineData && (
+                  {selectedSender.sparklineData && (
                     <Card>
                       <CardHeader>
                         <CardTitle className="text-sm">Atividade dos últimos 30 dias</CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <SparklineChart data={selectedCompetitor.sparklineData} className="h-16" />
+                        <SparklineChart data={selectedSender.sparklineData} className="h-16" />
                       </CardContent>
                     </Card>
                   )}
@@ -611,7 +611,7 @@ export default function Senders() {
                 </TabsContent>
 
                 <TabsContent value="insights" className="space-y-4">
-                  {selectedCompetitor.insights && selectedCompetitor.insights.length > 0 ? (
+                  {selectedSender.insights && selectedSender.insights.length > 0 ? (
                     <Card>
                       <CardHeader>
                         <CardTitle className="text-base flex items-center gap-2">
@@ -621,7 +621,7 @@ export default function Senders() {
                       </CardHeader>
                       <CardContent>
                         <ul className="space-y-3">
-                          {selectedCompetitor.insights.map((insight, i) => (
+                          {selectedSender.insights.map((insight, i) => (
                             <li key={i} className="flex gap-3">
                               <span className="text-primary font-bold">•</span>
                               <span className="text-sm">{insight}</span>
