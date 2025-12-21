@@ -69,16 +69,6 @@ interface PlatformDomain {
   dns_verified_at: string | null;
   dns_status: string | null;
 }
-  is_verified: boolean;
-  is_active: boolean;
-  is_platform_domain: boolean;
-  created_at: string;
-  updated_at: string;
-  user_id: string;
-  mx_records: { preference: number; exchange: string }[] | null;
-  dns_verified_at: string | null;
-  dns_status: string | null;
-}
 
 interface ConnectivityTest {
   id: string;
@@ -307,7 +297,7 @@ export default function PlatformDomains() {
             <TooltipContent>
               <div className="text-sm">
                 <p className="font-medium">MX Records:</p>
-                {domain.mx_records?.map((mx, i) => (
+                {Array.isArray(domain.mx_records) && domain.mx_records.map((mx: { preference: number; exchange: string }, i: number) => (
                   <p key={i}>{mx.preference} {mx.exchange}</p>
                 ))}
                 {domain.dns_verified_at && (
@@ -331,8 +321,8 @@ export default function PlatformDomains() {
             <TooltipContent>
               <div className="text-sm">
                 <p className="font-medium">MX encontrados:</p>
-                {domain.mx_records?.length ? (
-                  domain.mx_records.map((mx, i) => (
+                {Array.isArray(domain.mx_records) && domain.mx_records.length ? (
+                  domain.mx_records.map((mx: { preference: number; exchange: string }, i: number) => (
                     <p key={i}>{mx.preference} {mx.exchange}</p>
                   ))
                 ) : (
