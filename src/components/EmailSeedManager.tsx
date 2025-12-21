@@ -99,13 +99,13 @@ export function EmailSeedManager() {
       setIsAddDialogOpen(false);
       resetForm();
       toast({
-        title: 'Seed adicionado',
-        description: 'E-mail seed configurado com sucesso.',
+        title: 'Conta conectada',
+        description: 'Caixa de entrada configurada com sucesso.',
       });
     },
     onError: (error) => {
       toast({
-        title: 'Erro ao adicionar seed',
+        title: 'Erro ao conectar conta',
         description: error.message,
         variant: 'destructive',
       });
@@ -124,13 +124,13 @@ export function EmailSeedManager() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['email-seeds'] });
       toast({
-        title: 'Seed removido',
-        description: 'E-mail seed removido com sucesso.',
+        title: 'Conta removida',
+        description: 'Caixa de entrada desconectada com sucesso.',
       });
     },
     onError: (error) => {
       toast({
-        title: 'Erro ao remover seed',
+        title: 'Erro ao remover conta',
         description: error.message,
         variant: 'destructive',
       });
@@ -223,32 +223,32 @@ export function EmailSeedManager() {
           <div>
             <CardTitle className="flex items-center gap-2">
               <Mail className="h-5 w-5" />
-              E-mails Seed
+              Contas Conectadas
             </CardTitle>
             <CardDescription>
-              Configure e-mails para capturar newsletters automaticamente via IMAP
+              Conecte suas caixas de entrada para importar newsletters automaticamente via IMAP
             </CardDescription>
           </div>
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
               <Button size="sm" className="gap-2">
                 <Plus className="h-4 w-4" />
-                Adicionar Seed
+                Adicionar Conta
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
-                <DialogTitle>Adicionar E-mail Seed</DialogTitle>
+                <DialogTitle>Conectar Caixa de Entrada</DialogTitle>
                 <DialogDescription>
-                  Configure um e-mail para receber e capturar newsletters automaticamente.
+                  Conecte uma conta de email para capturar newsletters automaticamente.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Nome do Seed *</Label>
+                  <Label htmlFor="name">Nome da Conta *</Label>
                   <Input
                     id="name"
-                    placeholder="Ex: Newsletter Principal"
+                    placeholder="Ex: Meu Gmail Principal"
                     value={newSeed.name}
                     onChange={(e) => setNewSeed({ ...newSeed, name: e.target.value })}
                   />
@@ -328,14 +328,14 @@ export function EmailSeedManager() {
                 <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
                   Cancelar
                 </Button>
-                <Button onClick={handleSubmit} disabled={createSeedMutation.isPending}>
+              <Button onClick={handleSubmit} disabled={createSeedMutation.isPending}>
                   {createSeedMutation.isPending ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      Salvando...
+                      Conectando...
                     </>
                   ) : (
-                    'Adicionar Seed'
+                    'Conectar Conta'
                   )}
                 </Button>
               </div>
@@ -412,8 +412,8 @@ export function EmailSeedManager() {
           ) : (
             <div className="text-center py-8 text-muted-foreground">
               <Mail className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p className="mb-2">Nenhum e-mail seed configurado</p>
-              <p className="text-sm">Adicione um e-mail para começar a capturar newsletters automaticamente.</p>
+              <p className="mb-2">Nenhuma conta conectada</p>
+              <p className="text-sm">Conecte uma caixa de entrada para importar newsletters automaticamente.</p>
             </div>
           )}
         </CardContent>
@@ -423,7 +423,7 @@ export function EmailSeedManager() {
       <Dialog open={isSyncDialogOpen} onOpenChange={setIsSyncDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Sincronizar E-mail</DialogTitle>
+            <DialogTitle>Sincronizar Caixa de Entrada</DialogTitle>
             <DialogDescription>
               Digite a senha do e-mail ou senha de aplicativo para conectar ao servidor IMAP.
             </DialogDescription>

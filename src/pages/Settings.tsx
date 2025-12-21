@@ -115,7 +115,7 @@ const Settings = () => {
       <div>
         <h1 className="text-3xl font-bold">Configurações</h1>
         <p className="text-muted-foreground mt-1">
-          Gerencie seeds, domínios, integrações, alertas e equipe
+          Gerencie captura de emails, domínios, alertas e equipe
         </p>
       </div>
 
@@ -135,7 +135,7 @@ const Settings = () => {
           </TabsTrigger>
           <TabsTrigger value="seeds" className="gap-2">
             <Mail className="h-4 w-4" />
-            Seeds & Integrações
+            Captura de Emails
           </TabsTrigger>
           <TabsTrigger value="alerts" className="gap-2">
             <Bell className="h-4 w-4" />
@@ -336,7 +336,7 @@ const Settings = () => {
                 <div className="flex items-start gap-3">
                   <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium">4</div>
                   <div>
-                    <p className="font-medium">Crie aliases</p>
+                    <p className="font-medium">Crie emails de rastreamento</p>
                     <p className="text-sm text-muted-foreground">Crie emails como apple2024@seudominio.com para cada inscrição</p>
                   </div>
                 </div>
