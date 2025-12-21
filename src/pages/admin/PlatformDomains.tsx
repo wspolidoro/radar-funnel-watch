@@ -406,6 +406,24 @@ export default function PlatformDomains() {
   const activeDomains = domains?.filter(d => d.is_active) || [];
   const verifiedDomains = domains?.filter(d => d.dns_status === 'verified') || [];
 
+  // Quick test all domains
+  const testAllDomains = async () => {
+    if (!domains || !user) return;
+    
+    for (const domain of domains.filter(d => d.is_active)) {
+      await testConnectivity(domain);
+    }
+  };
+
+  // Verify all domains
+  const verifyAllDomains = async () => {
+    if (!domains) return;
+    
+    for (const domain of domains.filter(d => d.is_active)) {
+      await verifyDns(domain);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -424,6 +442,56 @@ export default function PlatformDomains() {
           Novo Domínio
         </Button>
       </div>
+
+      {/* Quick Actions */}
+      {domains && domains.length > 0 && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Wifi className="h-5 w-5 text-primary" />
+              Ações Rápidas
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-wrap gap-3">
+            <Button
+              onClick={verifyAllDomains}
+              variant="outline"
+              className="gap-2"
+              disabled={verifyingDomains.size > 0}
+            >
+              {verifyingDomains.size > 0 ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Search className="h-4 w-4" />
+              )}
+              Verificar DNS de Todos
+            </Button>
+            <Button
+              onClick={testAllDomains}
+              variant="default"
+              className="gap-2"
+              disabled={testingDomains.size > 0}
+            >
+              {testingDomains.size > 0 ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Wifi className="h-4 w-4" />
+              )}
+              Testar Conectividade de Todos
+            </Button>
+            
+            {/* DNS Instructions for Maileroo */}
+            <div className="w-full mt-2 p-3 bg-muted/50 rounded-lg text-sm">
+              <p className="font-medium mb-1">📧 Configuração DNS para Maileroo:</p>
+              <div className="grid gap-1 text-muted-foreground">
+                <p>1. <strong>Registro MX:</strong> <code className="bg-background px-1 rounded">mx.maileroo.com</code> (prioridade 10)</p>
+                <p>2. <strong>Inbound Routing:</strong> Configure no painel Maileroo para enviar para o webhook</p>
+                <p>3. <strong>Webhook URL:</strong> <code className="bg-background px-1 rounded text-xs break-all">https://owclqmcjxlypohbfddnw.supabase.co/functions/v1/receive-email</code></p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-3">
@@ -539,20 +607,28 @@ export default function PlatformDomains() {
                       <TableCell>
                         <div className="flex items-center gap-2">
                           {getTestStatusBadge(latestTest)}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() => testConnectivity(domain)}
-                            disabled={testingDomains.has(domain.id) || domain.dns_status !== 'verified'}
-                            title={domain.dns_status !== 'verified' ? 'Verifique o DNS primeiro' : 'Testar conectividade'}
-                          >
-                            {testingDomains.has(domain.id) ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <Wifi className="h-4 w-4" />
-                            )}
-                          </Button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant={domain.dns_status !== 'verified' ? 'outline' : 'ghost'}
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => testConnectivity(domain)}
+                                disabled={testingDomains.has(domain.id)}
+                              >
+                                {testingDomains.has(domain.id) ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Wifi className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {domain.dns_status !== 'verified' 
+                                ? 'DNS não verificado, mas você pode testar mesmo assim' 
+                                : 'Testar conectividade'}
+                            </TooltipContent>
+                          </Tooltip>
                         </div>
                       </TableCell>
                       <TableCell>
