@@ -1,11 +1,9 @@
-import { useEffect, useState } from 'react';
-import { TrendingUp, Mail, GitBranch, Clock, FileText, Inbox, BarChart3, PieChart } from 'lucide-react';
+import { useState } from 'react';
+import { TrendingUp, FileText, Inbox, BarChart3, PieChart } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { dashboardService, alertService } from '@/services/api';
-import type { DashboardKPIs, Alert as AlertType } from '@/types';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -36,27 +34,37 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 const Dashboard = () => {
-  const [kpis, setKpis] = useState<DashboardKPIs | null>(null);
-  const [alerts, setAlerts] = useState<AlertType[]>([]);
-  const [loading, setLoading] = useState(true);
   const [periodDays, setPeriodDays] = useState<string>('30');
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [kpisData, alertsData] = await Promise.all([
-          dashboardService.getKPIs(),
-          alertService.list({ unreadOnly: true })
-        ]);
-        setKpis(kpisData);
-        setAlerts(alertsData);
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadData();
-  }, []);
+  // Query for senders count
+  const { data: sendersCount = 0 } = useQuery({
+    queryKey: ['senders-count'],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('email_aliases')
+        .select('*', { count: 'exact', head: true });
+      
+      if (error) throw error;
+      return count || 0;
+    },
+  });
+
+  // Query for data leak alerts
+  const { data: alerts = [] } = useQuery({
+    queryKey: ['data-leak-alerts-unread'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('data_leak_alerts')
+        .select('*')
+        .eq('is_read', false)
+        .order('created_at', { ascending: false })
+        .limit(5);
+      
+      if (error) throw error;
+      return data || [];
+    },
+  });
 
   // Query for newsletter stats
   const { data: newsletterStats } = useQuery({
@@ -133,34 +141,7 @@ const Dashboard = () => {
   });
 
   const totalNewsletters = newsletterStats?.length || 0;
-  const processedNewsletters = newsletterStats?.filter(n => n.is_processed).length || 0;
   const categorizedNewsletters = newsletterStats?.filter(n => n.category).length || 0;
-
-  const alertTypeLabels: Record<string, string> = {
-    new_email: 'Novo email detectado',
-    new_funnel: 'Novo funil identificado',
-    competitor_paused: 'Concorrente pausado',
-    ab_test_detected: 'Teste A/B detectado'
-  };
-
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {[1, 2, 3, 4].map(i => (
-            <Card key={i}>
-              <CardHeader className="animate-pulse">
-                <div className="h-4 w-24 bg-muted rounded" />
-              </CardHeader>
-              <CardContent>
-                <div className="h-8 w-16 bg-muted rounded" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
@@ -231,7 +212,7 @@ const Dashboard = () => {
             <TrendingUp className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{kpis?.sendersMonitored || 0}</div>
+            <div className="text-3xl font-bold">{sendersCount}</div>
           </CardContent>
         </Card>
 
@@ -392,12 +373,12 @@ const Dashboard = () => {
       {/* Alerts Feed */}
       <Card>
         <CardHeader>
-          <CardTitle>Alertas Recentes</CardTitle>
+          <CardTitle>Alertas de Vazamento de Dados</CardTitle>
         </CardHeader>
         <CardContent>
           {alerts.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">
-              Nenhum alerta novo no momento
+              Nenhum alerta de vazamento no momento
             </p>
           ) : (
             <div className="space-y-3">
@@ -405,10 +386,10 @@ const Dashboard = () => {
                 <Alert key={alert.id}>
                   <AlertDescription className="flex items-center justify-between">
                     <span className="text-sm">
-                      {alertTypeLabels[alert.type] || alert.type}
+                      Email de <strong>{alert.from_email}</strong> recebido de domínio inesperado
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      {new Date(alert.createdAt).toLocaleDateString('pt-BR')}
+                      {new Date(alert.created_at).toLocaleDateString('pt-BR')}
                     </span>
                   </AlertDescription>
                 </Alert>
@@ -419,7 +400,7 @@ const Dashboard = () => {
       </Card>
 
       {/* Empty state hint */}
-      {totalNewsletters === 0 && kpis && kpis.sendersMonitored === 0 && (
+      {totalNewsletters === 0 && sendersCount === 0 && (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <TrendingUp className="h-12 w-12 text-muted-foreground mb-4" />
@@ -429,8 +410,8 @@ const Dashboard = () => {
             <p className="text-sm text-muted-foreground mb-4 max-w-md">
               Adicione remetentes e conecte seu e-mail seed para começar a monitorar campanhas de email marketing.
             </p>
-            <Button onClick={() => navigate('/onboarding')}>
-              Iniciar Configuração
+            <Button onClick={() => navigate('/senders')}>
+              Adicionar Remetentes
             </Button>
           </CardContent>
         </Card>

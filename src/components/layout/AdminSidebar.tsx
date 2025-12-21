@@ -8,7 +8,8 @@ import {
   Shield,
   AlertTriangle,
   Settings,
-  Mail
+  Mail,
+  Globe
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import {
@@ -31,6 +32,7 @@ const adminMenuItems = [
   { title: 'Alertas Vazamento', url: '/admin/alerts', icon: AlertTriangle },
   { title: 'Planos', url: '/admin/plans', icon: Crown },
   { title: 'Pagamentos', url: '/admin/payments', icon: CreditCard },
+  { title: 'Domínios Plataforma', url: '/admin/domains', icon: Globe },
   { title: 'Integrações', url: '/admin/integrations', icon: Blocks },
   { title: 'Config. Email', url: '/admin/email-setup', icon: Mail },
   { title: 'Configurações', url: '/admin/settings', icon: Settings },
