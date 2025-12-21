@@ -66,7 +66,7 @@ export type Database = {
           links_count: number | null
           optin_status: string | null
           received_at: string
-          seed_id: string
+          seed_id: string | null
           sentiment: string | null
           subject: string
           text_content: string | null
@@ -90,7 +90,7 @@ export type Database = {
           links_count?: number | null
           optin_status?: string | null
           received_at: string
-          seed_id: string
+          seed_id?: string | null
           sentiment?: string | null
           subject: string
           text_content?: string | null
@@ -114,7 +114,7 @@ export type Database = {
           links_count?: number | null
           optin_status?: string | null
           received_at?: string
-          seed_id?: string
+          seed_id?: string | null
           sentiment?: string | null
           subject?: string
           text_content?: string | null
