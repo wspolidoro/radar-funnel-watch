@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Inbox, Search, Filter, Mail, Calendar, User, ExternalLink, Loader2, RefreshCw, Sparkles, Bell } from 'lucide-react';
+import { Inbox, Search, Filter, Mail, Calendar, User, ExternalLink, Loader2, RefreshCw, Sparkles, Bell, MousePointerClick, Link2, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
@@ -18,9 +18,15 @@ import { ExportHTMLButton } from '@/components/ExportHTMLButton';
 import { TrackingCreator } from '@/components/TrackingCreator';
 import { TrackingList } from '@/components/TrackingList';
 
+interface CTA {
+  text: string;
+  url: string;
+}
+
 interface CapturedNewsletter {
   id: string;
-  seed_id: string;
+  seed_id: string | null;
+  alias_id: string | null;
   competitor_id: string | null;
   from_email: string;
   from_name: string | null;
@@ -36,9 +42,14 @@ interface CapturedNewsletter {
   email_type: string | null;
   links_count: number | null;
   word_count: number | null;
+  ctas: CTA[] | unknown[] | null;
   email_seeds?: {
     name: string;
     email: string;
+  };
+  email_aliases?: {
+    name: string;
+    alias: string;
   };
 }
 
@@ -111,6 +122,10 @@ const CapturedNewsletters = () => {
           email_seeds (
             name,
             email
+          ),
+          email_aliases (
+            name,
+            alias
           )
         `)
         .order('received_at', { ascending: false });
@@ -332,8 +347,23 @@ const CapturedNewsletters = () => {
                           {newsletter.email_seeds.name}
                         </span>
                       )}
+                      {newsletter.email_aliases && (
+                        <span className="flex items-center gap-1">
+                          <Mail className="h-3 w-3" />
+                          {newsletter.email_aliases.name || newsletter.email_aliases.alias}
+                        </span>
+                      )}
                       {newsletter.links_count !== null && newsletter.links_count > 0 && (
-                        <span>{newsletter.links_count} links</span>
+                        <span className="flex items-center gap-1">
+                          <Link2 className="h-3 w-3" />
+                          {newsletter.links_count} links
+                        </span>
+                      )}
+                      {newsletter.ctas && Array.isArray(newsletter.ctas) && newsletter.ctas.length > 0 && (
+                        <span className="flex items-center gap-1">
+                          <MousePointerClick className="h-3 w-3" />
+                          {newsletter.ctas.length} CTAs
+                        </span>
                       )}
                     </div>
                   </div>
@@ -428,6 +458,67 @@ const CapturedNewsletters = () => {
                     htmlContent={selectedNewsletter.html_content} 
                     subject={selectedNewsletter.subject}
                   />
+                </div>
+
+                {/* CTA Analysis */}
+                {selectedNewsletter.ctas && Array.isArray(selectedNewsletter.ctas) && selectedNewsletter.ctas.length > 0 && (
+                  <div className="border-t pt-6">
+                    <h4 className="font-medium mb-4 flex items-center gap-2">
+                      <MousePointerClick className="h-4 w-4" />
+                      Análise de CTAs ({selectedNewsletter.ctas.length})
+                    </h4>
+                    <div className="space-y-2">
+                      {(selectedNewsletter.ctas as CTA[]).map((cta, index) => (
+                        <div 
+                          key={index}
+                          className="p-3 border rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm">{cta.text || 'Sem texto'}</p>
+                              <p className="text-xs text-muted-foreground truncate mt-1">
+                                <Link2 className="h-3 w-3 inline mr-1" />
+                                {cta.url}
+                              </p>
+                            </div>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => window.open(cta.url, '_blank')}
+                            >
+                              <ExternalLink className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Email Stats */}
+                <div className="border-t pt-6">
+                  <h4 className="font-medium mb-4 flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    Estatísticas do Email
+                  </h4>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="p-3 bg-muted/50 rounded-lg text-center">
+                      <p className="text-2xl font-bold">{selectedNewsletter.links_count || 0}</p>
+                      <p className="text-xs text-muted-foreground">Links</p>
+                    </div>
+                    <div className="p-3 bg-muted/50 rounded-lg text-center">
+                      <p className="text-2xl font-bold">{selectedNewsletter.word_count || 0}</p>
+                      <p className="text-xs text-muted-foreground">Palavras</p>
+                    </div>
+                    <div className="p-3 bg-muted/50 rounded-lg text-center">
+                      <p className="text-2xl font-bold">
+                        {selectedNewsletter.ctas && Array.isArray(selectedNewsletter.ctas) 
+                          ? selectedNewsletter.ctas.length 
+                          : 0}
+                      </p>
+                      <p className="text-xs text-muted-foreground">CTAs</p>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="border-t pt-6">

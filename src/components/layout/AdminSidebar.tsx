@@ -7,7 +7,8 @@ import {
   Crown,
   Shield,
   AlertTriangle,
-  Settings
+  Settings,
+  Mail
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import {
@@ -31,6 +32,7 @@ const adminMenuItems = [
   { title: 'Planos', url: '/admin/plans', icon: Crown },
   { title: 'Pagamentos', url: '/admin/payments', icon: CreditCard },
   { title: 'Integrações', url: '/admin/integrations', icon: Blocks },
+  { title: 'Config. Email', url: '/admin/email-setup', icon: Mail },
   { title: 'Configurações', url: '/admin/settings', icon: Settings },
 ];
 
