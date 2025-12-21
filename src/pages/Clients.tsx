@@ -1,22 +1,16 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { 
   Search, 
-  Plus, 
   Eye, 
-  Edit, 
-  PauseCircle, 
   Download,
-  BarChart3,
-  FileText,
-  TrendingUp
+  Users
 } from 'lucide-react';
-import { clientService } from '@/services/api';
-import type { Client, ClientStatus, ClientPlan } from '@/types';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { 
   Table, 
   TableBody, 
@@ -25,14 +19,6 @@ import {
   TableHeader, 
   TableRow 
 } from '@/components/ui/table';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import {
   Sheet,
   SheetContent,
@@ -49,149 +35,132 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select';
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from '@/components/ui/pagination';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
-const statusColors: Record<ClientStatus, string> = {
-  ativo: 'bg-green-500/10 text-green-700 border-green-500/20',
-  teste: 'bg-yellow-500/10 text-yellow-700 border-yellow-500/20',
-  inativo: 'bg-gray-500/10 text-gray-700 border-gray-500/20'
+const statusColors: Record<string, string> = {
+  active: 'bg-green-500/10 text-green-700 border-green-500/20',
+  trialing: 'bg-yellow-500/10 text-yellow-700 border-yellow-500/20',
+  canceled: 'bg-gray-500/10 text-gray-700 border-gray-500/20',
+  past_due: 'bg-red-500/10 text-red-700 border-red-500/20',
 };
 
-const statusLabels: Record<ClientStatus, string> = {
-  ativo: 'Ativo',
-  teste: 'Teste',
-  inativo: 'Inativo'
+const statusLabels: Record<string, string> = {
+  active: 'Ativo',
+  trialing: 'Teste',
+  canceled: 'Cancelado',
+  past_due: 'Atrasado',
 };
 
-const planLabels: Record<ClientPlan, string> = {
-  basic: 'Basic',
-  pro: 'Pro',
-  enterprise: 'Enterprise'
-};
+interface ClientData {
+  user_id: string;
+  status: string;
+  created_at: string;
+  current_period_end: string | null;
+  plan_name: string | null;
+  plan_price: number | null;
+  full_name: string | null;
+}
 
 export default function Clients() {
-  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('todos');
-  const [planFilter, setPlanFilter] = useState('todos');
-  const [page, setPage] = useState(1);
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [selectedClient, setSelectedClient] = useState<ClientData | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState<Partial<Client>>({});
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['clients', search, statusFilter, planFilter, page],
-    queryFn: () => clientService.list({
-      search,
-      status: statusFilter,
-      plano: planFilter,
-      page,
-      pageSize: 10
-    })
+  // Fetch clients from real data (subscriptions + profiles separately)
+  const { data: clients, isLoading } = useQuery({
+    queryKey: ['admin-clients', search, statusFilter],
+    queryFn: async () => {
+      // Get subscriptions with plans
+      let query = supabase
+        .from('saas_subscriptions')
+        .select(`
+          user_id,
+          status,
+          created_at,
+          current_period_end,
+          plan:saas_plans(name, price_monthly)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (statusFilter !== 'todos') {
+        query = query.eq('status', statusFilter);
+      }
+
+      const { data: subscriptions, error: subError } = await query;
+      if (subError) throw subError;
+
+      if (!subscriptions?.length) return [];
+
+      // Get profiles for all user_ids
+      const userIds = subscriptions.map(s => s.user_id);
+      const { data: profiles, error: profError } = await supabase
+        .from('profiles')
+        .select('user_id, full_name')
+        .in('user_id', userIds);
+
+      if (profError) throw profError;
+
+      // Merge data
+      const profileMap = new Map(profiles?.map(p => [p.user_id, p.full_name]) || []);
+
+      let merged: ClientData[] = subscriptions.map(sub => ({
+        user_id: sub.user_id,
+        status: sub.status,
+        created_at: sub.created_at,
+        current_period_end: sub.current_period_end,
+        plan_name: sub.plan?.name || null,
+        plan_price: sub.plan?.price_monthly || null,
+        full_name: profileMap.get(sub.user_id) || null,
+      }));
+
+      // Filter by search if provided
+      if (search) {
+        const searchLower = search.toLowerCase();
+        merged = merged.filter(c => 
+          c.full_name?.toLowerCase().includes(searchLower) ||
+          c.user_id.toLowerCase().includes(searchLower)
+        );
+      }
+
+      return merged;
+    },
   });
 
-  const createMutation = useMutation({
-    mutationFn: clientService.create,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['clients'] });
-      toast({
-        title: 'Cliente criado',
-        description: 'O cliente foi adicionado com sucesso.'
-      });
-      setIsFormOpen(false);
-      setFormData({});
-    }
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<Client> }) =>
-      clientService.update(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['clients'] });
-      toast({
-        title: 'Cliente atualizado',
-        description: 'As informações foram salvas com sucesso.'
-      });
-      setIsFormOpen(false);
-      setIsEditing(false);
-      setFormData({});
-    }
-  });
-
-  const suspendMutation = useMutation({
-    mutationFn: clientService.suspend,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['clients'] });
-      toast({
-        title: 'Cliente suspendido',
-        description: 'O cliente foi marcado como inativo.'
-      });
-      setIsDetailsOpen(false);
-    }
-  });
-
-  const exportMutation = useMutation({
-    mutationFn: clientService.exportCSV,
-    onSuccess: (csvData) => {
-      const blob = new Blob([csvData], { type: 'text/csv' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `clientes-${new Date().toISOString().split('T')[0]}.csv`;
-      a.click();
-      toast({
-        title: 'Exportação concluída',
-        description: 'O arquivo CSV foi gerado com sucesso.'
-      });
-    }
-  });
-
-  const handleViewClient = (client: Client) => {
+  const handleViewClient = (client: ClientData) => {
     setSelectedClient(client);
     setIsDetailsOpen(true);
   };
 
-  const handleEditClient = (client: Client) => {
-    setFormData(client);
-    setIsEditing(true);
-    setIsFormOpen(true);
-  };
-
-  const handleNewClient = () => {
-    setFormData({
-      status: 'teste',
-      plano: 'basic'
-    });
-    setIsEditing(false);
-    setIsFormOpen(true);
-  };
-
-  const handleSaveClient = () => {
-    if (isEditing && formData.id) {
-      updateMutation.mutate({ id: formData.id, data: formData });
-    } else {
-      createMutation.mutate(formData);
+  const handleExport = () => {
+    if (!clients?.length) {
+      toast({ title: 'Nenhum dado para exportar', variant: 'destructive' });
+      return;
     }
-  };
 
-  const handleSuspend = () => {
-    if (selectedClient) {
-      suspendMutation.mutate(selectedClient.id);
-    }
-  };
+    const csvContent = [
+      ['ID', 'Nome', 'Status', 'Plano', 'Criado em'].join(','),
+      ...clients.map(c => [
+        c.user_id,
+        c.full_name || 'Sem nome',
+        statusLabels[c.status] || c.status,
+        c.plan_name || 'Sem plano',
+        format(new Date(c.created_at), 'dd/MM/yyyy')
+      ].join(','))
+    ].join('\n');
 
-  const totalPages = data ? Math.ceil(data.total / data.pageSize) : 1;
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `clientes-${format(new Date(), 'yyyy-MM-dd')}.csv`;
+    a.click();
+    
+    toast({ title: 'Exportação concluída' });
+  };
 
   return (
     <div className="space-y-6">
@@ -200,19 +169,13 @@ export default function Clients() {
         <div>
           <h1 className="text-3xl font-bold">Clientes</h1>
           <p className="text-muted-foreground">
-            Gerencie seus clientes e seus planos
+            Gerencie seus clientes e assinaturas
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => exportMutation.mutate()}>
-            <Download className="h-4 w-4" />
-            Exportar CSV
-          </Button>
-          <Button onClick={handleNewClient}>
-            <Plus className="h-4 w-4" />
-            Novo Cliente
-          </Button>
-        </div>
+        <Button variant="outline" onClick={handleExport}>
+          <Download className="h-4 w-4 mr-2" />
+          Exportar CSV
+        </Button>
       </div>
 
       {/* Filters */}
@@ -222,7 +185,7 @@ export default function Clients() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Buscar cliente por nome ou e-mail..."
+                placeholder="Buscar cliente por nome..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-9"
@@ -234,20 +197,10 @@ export default function Clients() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="todos">Todos</SelectItem>
-                <SelectItem value="ativo">Ativo</SelectItem>
-                <SelectItem value="teste">Teste</SelectItem>
-                <SelectItem value="inativo">Inativo</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={planFilter} onValueChange={setPlanFilter}>
-              <SelectTrigger className="w-full md:w-40">
-                <SelectValue placeholder="Plano" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos</SelectItem>
-                <SelectItem value="basic">Basic</SelectItem>
-                <SelectItem value="pro">Pro</SelectItem>
-                <SelectItem value="enterprise">Enterprise</SelectItem>
+                <SelectItem value="active">Ativo</SelectItem>
+                <SelectItem value="trialing">Teste</SelectItem>
+                <SelectItem value="canceled">Cancelado</SelectItem>
+                <SelectItem value="past_due">Atrasado</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -263,7 +216,7 @@ export default function Clients() {
                 <Skeleton key={i} className="h-12 w-full" />
               ))}
             </div>
-          ) : data?.data.length === 0 ? (
+          ) : clients?.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <div className="rounded-full bg-muted p-6 mb-4">
                 <Users className="h-12 w-12 text-muted-foreground" />
@@ -271,394 +224,141 @@ export default function Clients() {
               <h3 className="text-lg font-semibold mb-2">
                 Nenhum cliente encontrado
               </h3>
-              <p className="text-muted-foreground mb-4">
-                Nenhum cliente cadastrado ainda. Clique em "Novo Cliente" para começar.
+              <p className="text-muted-foreground">
+                Nenhuma assinatura encontrada com os filtros selecionados.
               </p>
-              <Button onClick={handleNewClient}>
-                <Plus className="h-4 w-4" />
-                Novo Cliente
-              </Button>
             </div>
           ) : (
-            <>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nome da Empresa</TableHead>
-                    <TableHead>Responsável / E-mail</TableHead>
-                    <TableHead>Plano</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Criado em</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Plano</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Membro desde</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {clients?.map((client) => (
+                  <TableRow key={client.user_id}>
+                    <TableCell className="font-medium">
+                      {client.full_name || 'Sem nome'}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">
+                        {client.plan_name || 'Sem plano'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={statusColors[client.status] || ''}>
+                        {statusLabels[client.status] || client.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {format(new Date(client.created_at), "dd 'de' MMM, yyyy", { locale: ptBR })}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleViewClient(client)}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data?.data.map((client) => (
-                    <TableRow key={client.id}>
-                      <TableCell className="font-medium">{client.nome}</TableCell>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="text-sm">{client.responsavel}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {client.email}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{planLabels[client.plano]}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={statusColors[client.status]}>
-                          {statusLabels[client.status]}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {new Date(client.criadoEm).toLocaleDateString('pt-BR')}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleViewClient(client)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEditClient(client)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          {client.status !== 'inativo' && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedClient(client);
-                                suspendMutation.mutate(client.id);
-                              }}
-                            >
-                              <PauseCircle className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="border-t p-4">
-                  <Pagination>
-                    <PaginationContent>
-                      <PaginationItem>
-                        <PaginationPrevious
-                          onClick={() => setPage(Math.max(1, page - 1))}
-                          className={page === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                        />
-                      </PaginationItem>
-                      {[...Array(totalPages)].map((_, i) => (
-                        <PaginationItem key={i}>
-                          <PaginationLink
-                            onClick={() => setPage(i + 1)}
-                            isActive={page === i + 1}
-                            className="cursor-pointer"
-                          >
-                            {i + 1}
-                          </PaginationLink>
-                        </PaginationItem>
-                      ))}
-                      <PaginationItem>
-                        <PaginationNext
-                          onClick={() => setPage(Math.min(totalPages, page + 1))}
-                          className={page === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                        />
-                      </PaginationItem>
-                    </PaginationContent>
-                  </Pagination>
-                </div>
-              )}
-            </>
+                ))}
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>
 
       {/* Client Details Sheet */}
       <Sheet open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-        <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
+        <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
           {selectedClient && (
             <>
               <SheetHeader>
                 <div className="flex items-center gap-4 mb-4">
                   <div className="h-16 w-16 rounded-lg bg-primary/10 flex items-center justify-center">
                     <span className="text-2xl font-bold text-primary">
-                      {selectedClient.nome.charAt(0)}
+                      {(selectedClient.full_name || 'U').charAt(0).toUpperCase()}
                     </span>
                   </div>
                   <div>
-                    <SheetTitle className="text-2xl">{selectedClient.nome}</SheetTitle>
-                    <SheetDescription>{selectedClient.dominio}</SheetDescription>
+                    <SheetTitle className="text-2xl">
+                      {selectedClient.full_name || 'Sem nome'}
+                    </SheetTitle>
+                    <SheetDescription>
+                      ID: {selectedClient.user_id.slice(0, 8)}...
+                    </SheetDescription>
                   </div>
                 </div>
               </SheetHeader>
 
               <Tabs defaultValue="resumo" className="mt-6">
-                <TabsList className="grid w-full grid-cols-3">
+                <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="resumo">Resumo</TabsTrigger>
-                  <TabsTrigger value="uso">Uso</TabsTrigger>
-                  <TabsTrigger value="historico">Histórico</TabsTrigger>
+                  <TabsTrigger value="assinatura">Assinatura</TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="resumo" className="space-y-4">
+                <TabsContent value="resumo" className="space-y-4 mt-4">
                   <div className="grid gap-4">
                     <div>
-                      <Label className="text-muted-foreground">Responsável</Label>
-                      <p className="text-lg">{selectedClient.responsavel}</p>
-                    </div>
-                    <div>
-                      <Label className="text-muted-foreground">E-mail</Label>
-                      <p className="text-lg">{selectedClient.email}</p>
-                    </div>
-                    {selectedClient.telefone && (
-                      <div>
-                        <Label className="text-muted-foreground">Telefone</Label>
-                        <p className="text-lg">{selectedClient.telefone}</p>
-                      </div>
-                    )}
-                    <div>
-                      <Label className="text-muted-foreground">Plano Atual</Label>
-                      <div className="mt-1">
-                        <Badge variant="outline" className="text-base px-3 py-1">
-                          {planLabels[selectedClient.plano]}
-                        </Badge>
-                      </div>
+                      <Label className="text-muted-foreground">Nome</Label>
+                      <p className="text-lg">{selectedClient.full_name || 'Não informado'}</p>
                     </div>
                     <div>
                       <Label className="text-muted-foreground">Status</Label>
                       <div className="mt-1">
                         <Badge 
                           variant="outline" 
-                          className={`text-base px-3 py-1 ${statusColors[selectedClient.status]}`}
+                          className={`text-base px-3 py-1 ${statusColors[selectedClient.status] || ''}`}
                         >
-                          {statusLabels[selectedClient.status]}
+                          {statusLabels[selectedClient.status] || selectedClient.status}
                         </Badge>
                       </div>
                     </div>
-                  </div>
-
-                  <div className="flex gap-2 pt-4">
-                    <Button variant="outline" className="flex-1">
-                      <BarChart3 className="h-4 w-4" />
-                      Alterar Plano
-                    </Button>
-                    <Button variant="outline" className="flex-1">
-                      <FileText className="h-4 w-4" />
-                      Gerar Relatório
-                    </Button>
-                  </div>
-                  
-                  {selectedClient.status !== 'inativo' && (
-                    <Button 
-                      variant="destructive" 
-                      className="w-full"
-                      onClick={handleSuspend}
-                    >
-                      <PauseCircle className="h-4 w-4" />
-                      Suspender Cliente
-                    </Button>
-                  )}
-                </TabsContent>
-
-                <TabsContent value="uso" className="space-y-4">
-                  <div className="grid gap-4">
-                    <Card>
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-sm font-medium flex items-center gap-2">
-                          <TrendingUp className="h-4 w-4" />
-                          Remetentes Monitorados
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-3xl font-bold">{selectedClient.uso.remetentes}</p>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-sm font-medium flex items-center gap-2">
-                          <Mail className="h-4 w-4" />
-                          E-mails Coletados
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-3xl font-bold">{selectedClient.uso.emails}</p>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-sm font-medium flex items-center gap-2">
-                          <FileText className="h-4 w-4" />
-                          Relatórios Gerados
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-3xl font-bold">{selectedClient.uso.relatorios}</p>
-                      </CardContent>
-                    </Card>
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="historico" className="space-y-4">
-                  {selectedClient.historicoPagamentos.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      Nenhum histórico de pagamento disponível
+                    <div>
+                      <Label className="text-muted-foreground">Membro desde</Label>
+                      <p className="text-lg">
+                        {format(new Date(selectedClient.created_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                      </p>
                     </div>
-                  ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Data</TableHead>
-                          <TableHead>Valor</TableHead>
-                          <TableHead>Status</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {selectedClient.historicoPagamentos.map((pagamento, i) => (
-                          <TableRow key={i}>
-                            <TableCell>
-                              {new Date(pagamento.data).toLocaleDateString('pt-BR')}
-                            </TableCell>
-                            <TableCell className="font-medium">{pagamento.valor}</TableCell>
-                            <TableCell>
-                              <Badge 
-                                variant="outline" 
-                                className="bg-green-500/10 text-green-700 border-green-500/20"
-                              >
-                                {pagamento.status}
-                              </Badge>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  )}
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="assinatura" className="space-y-4 mt-4">
+                  <div className="grid gap-4">
+                    <div>
+                      <Label className="text-muted-foreground">Plano Atual</Label>
+                      <p className="text-lg font-medium">{selectedClient.plan_name || 'Sem plano'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground">Valor Mensal</Label>
+                      <p className="text-lg">
+                        {selectedClient.plan_price 
+                          ? `R$ ${selectedClient.plan_price.toFixed(2)}`
+                          : 'Gratuito'}
+                      </p>
+                    </div>
+                    {selectedClient.current_period_end && (
+                      <div>
+                        <Label className="text-muted-foreground">Próxima Renovação</Label>
+                        <p className="text-lg">
+                          {format(new Date(selectedClient.current_period_end), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </TabsContent>
               </Tabs>
             </>
           )}
         </SheetContent>
       </Sheet>
-
-      {/* Client Form Dialog */}
-      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {isEditing ? 'Editar Cliente' : 'Novo Cliente'}
-            </DialogTitle>
-            <DialogDescription>
-              {isEditing 
-                ? 'Atualize as informações do cliente.' 
-                : 'Preencha os dados para adicionar um novo cliente.'}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="nome">Nome da Empresa</Label>
-              <Input
-                id="nome"
-                value={formData.nome || ''}
-                onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                placeholder="Tech Solutions Ltda"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="dominio">Domínio</Label>
-              <Input
-                id="dominio"
-                value={formData.dominio || ''}
-                onChange={(e) => setFormData({ ...formData, dominio: e.target.value })}
-                placeholder="techsolutions.com.br"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="responsavel">Responsável</Label>
-              <Input
-                id="responsavel"
-                value={formData.responsavel || ''}
-                onChange={(e) => setFormData({ ...formData, responsavel: e.target.value })}
-                placeholder="Maria Santos"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="email">E-mail</Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email || ''}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="maria@techsolutions.com.br"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="telefone">Telefone (opcional)</Label>
-              <Input
-                id="telefone"
-                value={formData.telefone || ''}
-                onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
-                placeholder="(11) 98765-4321"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="plano">Plano</Label>
-              <Select 
-                value={formData.plano || 'basic'} 
-                onValueChange={(value) => setFormData({ ...formData, plano: value as ClientPlan })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="basic">Basic</SelectItem>
-                  <SelectItem value="pro">Pro</SelectItem>
-                  <SelectItem value="enterprise">Enterprise</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="status">Status</Label>
-              <Select 
-                value={formData.status || 'teste'} 
-                onValueChange={(value) => setFormData({ ...formData, status: value as ClientStatus })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ativo">Ativo</SelectItem>
-                  <SelectItem value="teste">Teste</SelectItem>
-                  <SelectItem value="inativo">Inativo</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsFormOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSaveClient}>
-              Salvar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
-
-import { Mail, Users } from 'lucide-react';

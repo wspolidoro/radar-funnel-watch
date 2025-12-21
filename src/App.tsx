@@ -39,6 +39,7 @@ import AdminClientDetails from "./pages/admin/ClientDetails";
 import AdminSaasMetrics from "./pages/admin/SaasMetrics";
 import AdminDataLeakAlerts from "./pages/admin/DataLeakAlerts";
 import AdminEmailProviderSetup from "./pages/admin/EmailProviderSetup";
+import AdminPlatformDomains from "./pages/admin/PlatformDomains";
 
 const queryClient = new QueryClient();
 
@@ -112,6 +113,7 @@ const App = () => (
               <Route path="plans" element={<AdminPlans />} />
               <Route path="payments" element={<AdminPayments />} />
               <Route path="integrations" element={<AdminIntegrations />} />
+              <Route path="domains" element={<AdminPlatformDomains />} />
               <Route path="email-setup" element={<AdminEmailProviderSetup />} />
               <Route path="settings" element={<Settings />} />
             </Route>
