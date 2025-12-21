@@ -9,7 +9,8 @@ import {
   AlertTriangle,
   Settings,
   Mail,
-  Globe
+  Globe,
+  FileText
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import {
@@ -33,6 +34,7 @@ const adminMenuItems = [
   { title: 'Planos', url: '/admin/plans', icon: Crown },
   { title: 'Pagamentos', url: '/admin/payments', icon: CreditCard },
   { title: 'Domínios Plataforma', url: '/admin/domains', icon: Globe },
+  { title: 'Logs de Email', url: '/admin/logs', icon: FileText },
   { title: 'Integrações', url: '/admin/integrations', icon: Blocks },
   { title: 'Config. Email', url: '/admin/email-setup', icon: Mail },
   { title: 'Configurações', url: '/admin/settings', icon: Settings },

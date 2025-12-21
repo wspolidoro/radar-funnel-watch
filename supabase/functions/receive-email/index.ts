@@ -163,6 +163,9 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const startTime = Date.now();
+  let logId: string | null = null;
+
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -261,6 +264,24 @@ serve(async (req) => {
     const localPart = recipientMatch[1];
     const domain = recipientMatch[2];
     const alias = `${localPart}@${domain}`;
+
+    // Create initial email log entry
+    const { data: logData } = await supabase
+      .from('email_logs')
+      .insert({
+        domain,
+        alias,
+        from_email: fromEmail,
+        from_name: fromName,
+        subject,
+        status: 'received',
+        metadata: { raw_recipient: recipient },
+      })
+      .select('id')
+      .single();
+
+    logId = logData?.id || null;
+    console.log('Created email log:', logId);
 
     // Find the alias in database
     const { data: aliasData, error: aliasError } = await supabase
@@ -406,7 +427,40 @@ serve(async (req) => {
         .eq('id', aliasId);
     }
 
-    console.log('Email saved successfully:', newsletter.id);
+    const processingTime = Date.now() - startTime;
+    console.log('Email saved successfully:', newsletter.id, `(${processingTime}ms)`);
+
+    // Check if this is a connectivity test email
+    if (subject.startsWith('[TEST-') && localPart.startsWith('connectivity-test-')) {
+      const testIdMatch = subject.match(/\[TEST-([a-f0-9-]+)\]/);
+      if (testIdMatch) {
+        console.log('Detected connectivity test email, updating test record...');
+        const { error: testUpdateError } = await supabase
+          .from('connectivity_tests')
+          .update({
+            status: 'success',
+            received_at: new Date().toISOString(),
+            latency_ms: processingTime,
+          })
+          .eq('test_alias', alias);
+
+        if (testUpdateError) {
+          console.error('Failed to update connectivity test:', testUpdateError);
+        }
+      }
+    }
+
+    // Update email log as processed
+    if (logId) {
+      await supabase
+        .from('email_logs')
+        .update({
+          status: 'processed',
+          processing_time_ms: processingTime,
+          newsletter_id: newsletter.id,
+        })
+        .eq('id', logId);
+    }
 
     // Trigger AI analysis asynchronously
     try {
@@ -430,6 +484,7 @@ serve(async (req) => {
       id: newsletter.id,
       alias: alias,
       optin_status: optinStatus,
+      processing_time_ms: processingTime,
     }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -438,6 +493,24 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error processing email:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const processingTime = Date.now() - startTime;
+
+    // Update log as error if we have a logId
+    if (logId) {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const supabase = createClient(supabaseUrl, supabaseServiceKey);
+      
+      await supabase
+        .from('email_logs')
+        .update({
+          status: 'error',
+          error_message: errorMessage,
+          processing_time_ms: processingTime,
+        })
+        .eq('id', logId);
+    }
+
     return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

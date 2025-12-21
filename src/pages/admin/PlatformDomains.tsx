@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,6 +31,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
 import { 
@@ -40,29 +46,60 @@ import {
   XCircle, 
   Loader2,
   Shield,
-  Server
+  Server,
+  Search,
+  Wifi,
+  AlertTriangle,
+  Clock
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 interface PlatformDomain {
   id: string;
   domain: string;
   provider: string;
+  is_verified: boolean | null;
+  is_active: boolean | null;
+  is_platform_domain: boolean | null;
+  created_at: string;
+  updated_at: string;
+  user_id: string;
+  mx_records: unknown;
+  dns_verified_at: string | null;
+  dns_status: string | null;
+}
   is_verified: boolean;
   is_active: boolean;
   is_platform_domain: boolean;
   created_at: string;
   updated_at: string;
   user_id: string;
+  mx_records: { preference: number; exchange: string }[] | null;
+  dns_verified_at: string | null;
+  dns_status: string | null;
+}
+
+interface ConnectivityTest {
+  id: string;
+  domain_id: string;
+  test_alias: string;
+  status: string;
+  latency_ms: number | null;
+  sent_at: string;
+  received_at: string | null;
+  error_message: string | null;
 }
 
 export default function PlatformDomains() {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [newDomain, setNewDomain] = useState('');
-  const [newProvider, setNewProvider] = useState('mailgun');
+  const [newProvider, setNewProvider] = useState('maileroo');
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [verifyingDomains, setVerifyingDomains] = useState<Set<string>>(new Set());
+  const [testingDomains, setTestingDomains] = useState<Set<string>>(new Set());
 
   // Fetch all platform domains
   const { data: domains, isLoading } = useQuery({
@@ -79,6 +116,27 @@ export default function PlatformDomains() {
     },
   });
 
+  // Fetch connectivity tests
+  const { data: tests } = useQuery({
+    queryKey: ['connectivity-tests'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('connectivity_tests')
+        .select('*')
+        .order('sent_at', { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+      return data as ConnectivityTest[];
+    },
+    refetchInterval: 5000, // Poll for test results
+  });
+
+  // Get latest test for a domain
+  const getLatestTest = (domainId: string) => {
+    return tests?.find(t => t.domain_id === domainId);
+  };
+
   // Add new domain
   const addMutation = useMutation({
     mutationFn: async () => {
@@ -94,6 +152,7 @@ export default function PlatformDomains() {
           is_verified: false,
           is_active: true,
           user_id: userData.user.id,
+          dns_status: 'pending',
         })
         .select()
         .single();
@@ -109,7 +168,7 @@ export default function PlatformDomains() {
       queryClient.invalidateQueries({ queryKey: ['platform-domains'] });
       setIsAddOpen(false);
       setNewDomain('');
-      setNewProvider('mailgun');
+      setNewProvider('maileroo');
     },
     onError: (error: Error) => {
       toast({
@@ -120,21 +179,79 @@ export default function PlatformDomains() {
     },
   });
 
-  // Toggle verified status
-  const toggleVerifiedMutation = useMutation({
-    mutationFn: async ({ id, verified }: { id: string; verified: boolean }) => {
-      const { error } = await supabase
-        .from('email_domains')
-        .update({ is_verified: verified, updated_at: new Date().toISOString() })
-        .eq('id', id);
+  // Verify DNS
+  const verifyDns = async (domain: PlatformDomain) => {
+    setVerifyingDomains(prev => new Set([...prev, domain.id]));
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('verify-dns', {
+        body: { domainId: domain.id, domain: domain.domain },
+      });
 
       if (error) throw error;
-    },
-    onSuccess: () => {
+
+      if (data.is_correct) {
+        toast({
+          title: 'DNS verificado ✓',
+          description: `MX records apontando corretamente para ${data.expected_mx}`,
+        });
+      } else {
+        toast({
+          title: 'DNS incorreto',
+          description: `Esperado: ${data.expected_mx}. Encontrado: ${data.found_mx?.map((m: {exchange: string}) => m.exchange).join(', ') || 'nenhum'}`,
+          variant: 'destructive',
+        });
+      }
+
       queryClient.invalidateQueries({ queryKey: ['platform-domains'] });
-      toast({ title: 'Status atualizado' });
-    },
-  });
+    } catch (error) {
+      toast({
+        title: 'Erro na verificação',
+        description: error instanceof Error ? error.message : 'Erro desconhecido',
+        variant: 'destructive',
+      });
+    } finally {
+      setVerifyingDomains(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(domain.id);
+        return newSet;
+      });
+    }
+  };
+
+  // Test connectivity
+  const testConnectivity = async (domain: PlatformDomain) => {
+    if (!user) return;
+    
+    setTestingDomains(prev => new Set([...prev, domain.id]));
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('test-email-connectivity', {
+        body: { domainId: domain.id, domain: domain.domain, userId: user.id },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Teste iniciado',
+        description: `Email de teste enviado para ${data.testAlias}. Aguardando recepção...`,
+      });
+
+      queryClient.invalidateQueries({ queryKey: ['connectivity-tests'] });
+    } catch (error) {
+      toast({
+        title: 'Erro no teste',
+        description: error instanceof Error ? error.message : 'Erro desconhecido',
+        variant: 'destructive',
+      });
+    } finally {
+      setTestingDomains(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(domain.id);
+        return newSet;
+      });
+    }
+  };
 
   // Toggle active status
   const toggleActiveMutation = useMutation({
@@ -176,8 +293,128 @@ export default function PlatformDomains() {
     },
   });
 
+  const getDnsStatusBadge = (domain: PlatformDomain) => {
+    switch (domain.dns_status) {
+      case 'verified':
+        return (
+          <Tooltip>
+            <TooltipTrigger>
+              <Badge className="gap-1 bg-green-500">
+                <CheckCircle2 className="h-3 w-3" />
+                DNS OK
+              </Badge>
+            </TooltipTrigger>
+            <TooltipContent>
+              <div className="text-sm">
+                <p className="font-medium">MX Records:</p>
+                {domain.mx_records?.map((mx, i) => (
+                  <p key={i}>{mx.preference} {mx.exchange}</p>
+                ))}
+                {domain.dns_verified_at && (
+                  <p className="text-muted-foreground mt-1">
+                    Verificado: {formatDistanceToNow(new Date(domain.dns_verified_at), { addSuffix: true, locale: ptBR })}
+                  </p>
+                )}
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        );
+      case 'incorrect':
+        return (
+          <Tooltip>
+            <TooltipTrigger>
+              <Badge variant="destructive" className="gap-1">
+                <XCircle className="h-3 w-3" />
+                MX Incorreto
+              </Badge>
+            </TooltipTrigger>
+            <TooltipContent>
+              <div className="text-sm">
+                <p className="font-medium">MX encontrados:</p>
+                {domain.mx_records?.length ? (
+                  domain.mx_records.map((mx, i) => (
+                    <p key={i}>{mx.preference} {mx.exchange}</p>
+                  ))
+                ) : (
+                  <p>Nenhum</p>
+                )}
+                <p className="text-amber-400 mt-1">Esperado: mx.maileroo.com</p>
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        );
+      case 'no_records':
+        return (
+          <Badge variant="outline" className="gap-1">
+            <AlertTriangle className="h-3 w-3" />
+            Sem MX
+          </Badge>
+        );
+      default:
+        return (
+          <Badge variant="outline" className="gap-1">
+            <Clock className="h-3 w-3" />
+            Pendente
+          </Badge>
+        );
+    }
+  };
+
+  const getTestStatusBadge = (test: ConnectivityTest | undefined) => {
+    if (!test) {
+      return (
+        <Badge variant="outline" className="gap-1">
+          <Clock className="h-3 w-3" />
+          Não testado
+        </Badge>
+      );
+    }
+
+    switch (test.status) {
+      case 'success':
+        return (
+          <Tooltip>
+            <TooltipTrigger>
+              <Badge className="gap-1 bg-green-500">
+                <Wifi className="h-3 w-3" />
+                {test.latency_ms}ms
+              </Badge>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Recebido em {test.latency_ms}ms</p>
+              <p className="text-muted-foreground">
+                {formatDistanceToNow(new Date(test.received_at!), { addSuffix: true, locale: ptBR })}
+              </p>
+            </TooltipContent>
+          </Tooltip>
+        );
+      case 'sent':
+      case 'pending':
+        return (
+          <Badge variant="outline" className="gap-1">
+            <Loader2 className="h-3 w-3 animate-spin" />
+            Aguardando...
+          </Badge>
+        );
+      case 'failed':
+        return (
+          <Tooltip>
+            <TooltipTrigger>
+              <Badge variant="destructive" className="gap-1">
+                <XCircle className="h-3 w-3" />
+                Falhou
+              </Badge>
+            </TooltipTrigger>
+            <TooltipContent>{test.error_message}</TooltipContent>
+          </Tooltip>
+        );
+      default:
+        return <Badge variant="secondary">{test.status}</Badge>;
+    }
+  };
+
   const activeDomains = domains?.filter(d => d.is_active) || [];
-  const verifiedDomains = domains?.filter(d => d.is_verified) || [];
+  const verifiedDomains = domains?.filter(d => d.dns_status === 'verified') || [];
 
   return (
     <div className="space-y-6">
@@ -216,7 +453,7 @@ export default function PlatformDomains() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4 text-green-500" />
-              Verificados
+              DNS Verificado
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -269,65 +506,88 @@ export default function PlatformDomains() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Domínio</TableHead>
-                  <TableHead>Provedor</TableHead>
-                  <TableHead>Verificado</TableHead>
+                  <TableHead>DNS Status</TableHead>
+                  <TableHead>Conectividade</TableHead>
                   <TableHead>Ativo</TableHead>
                   <TableHead>Criado em</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {domains?.map(domain => (
-                  <TableRow key={domain.id}>
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-2">
-                        <Globe className="h-4 w-4 text-primary" />
-                        {domain.domain}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="gap-1">
-                        <Server className="h-3 w-3" />
-                        {domain.provider}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
+                {domains?.map(domain => {
+                  const latestTest = getLatestTest(domain.id);
+                  return (
+                    <TableRow key={domain.id}>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          <Globe className="h-4 w-4 text-primary" />
+                          {domain.domain}
+                          <Badge variant="outline" className="gap-1">
+                            <Server className="h-3 w-3" />
+                            {domain.provider}
+                          </Badge>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {getDnsStatusBadge(domain)}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => verifyDns(domain)}
+                            disabled={verifyingDomains.has(domain.id)}
+                          >
+                            {verifyingDomains.has(domain.id) ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Search className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {getTestStatusBadge(latestTest)}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => testConnectivity(domain)}
+                            disabled={testingDomains.has(domain.id) || domain.dns_status !== 'verified'}
+                            title={domain.dns_status !== 'verified' ? 'Verifique o DNS primeiro' : 'Testar conectividade'}
+                          >
+                            {testingDomains.has(domain.id) ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Wifi className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </TableCell>
+                      <TableCell>
                         <Switch
-                          checked={domain.is_verified}
+                          checked={domain.is_active}
                           onCheckedChange={(checked) =>
-                            toggleVerifiedMutation.mutate({ id: domain.id, verified: checked })
+                            toggleActiveMutation.mutate({ id: domain.id, active: checked })
                           }
                         />
-                        {domain.is_verified ? (
-                          <CheckCircle2 className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <XCircle className="h-4 w-4 text-muted-foreground" />
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Switch
-                        checked={domain.is_active}
-                        onCheckedChange={(checked) =>
-                          toggleActiveMutation.mutate({ id: domain.id, active: checked })
-                        }
-                      />
-                    </TableCell>
-                    <TableCell>
-                      {format(new Date(domain.created_at), "dd 'de' MMM, yyyy", { locale: ptBR })}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setDeleteConfirm(domain.id)}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      </TableCell>
+                      <TableCell>
+                        {format(new Date(domain.created_at), "dd 'de' MMM, yyyy", { locale: ptBR })}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setDeleteConfirm(domain.id)}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}
@@ -362,21 +622,21 @@ export default function PlatformDomains() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="maileroo">Maileroo</SelectItem>
                   <SelectItem value="mailgun">Mailgun</SelectItem>
                   <SelectItem value="sendgrid">SendGrid</SelectItem>
-                  <SelectItem value="postmark">Postmark</SelectItem>
-                  <SelectItem value="ses">Amazon SES</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="p-3 bg-muted rounded-lg text-sm">
-              <p className="font-medium mb-2">Lembre-se:</p>
-              <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                <li>Configure o DNS do domínio para o provedor escolhido</li>
-                <li>Ative o webhook de recebimento para este domínio</li>
-                <li>Marque como verificado após confirmar a configuração</li>
-              </ul>
+              <p className="font-medium mb-2">Configuração Maileroo:</p>
+              <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
+                <li>Configure o registro MX para <code>mx.maileroo.com</code></li>
+                <li>Após adicionar, clique em "Verificar DNS"</li>
+                <li>Configure o Inbound Routing no Maileroo</li>
+                <li>Teste a conectividade enviando um email de teste</li>
+              </ol>
             </div>
           </div>
 
