@@ -93,7 +93,7 @@ function countWords(text: string): number {
   return text.split(/\s+/).filter(word => word.length > 0).length;
 }
 
-// Parse Maileroo webhook format
+// Parse Maileroo webhook format (based on official docs: https://maileroo.com/docs/inbound-routing/)
 function parseMailerooPayload(data: any): {
   recipient: string;
   fromEmail: string;
@@ -102,20 +102,23 @@ function parseMailerooPayload(data: any): {
   htmlContent: string;
   textContent: string;
   spfResult: string | null;
-  dkimResult: string | null;
+  dkimResult: boolean | null;
   isDmarcAligned: boolean | null;
   isSpam: boolean | null;
   validationUrl: string | null;
   deletionUrl: string | null;
+  messageId: string | null;
+  domain: string | null;
+  envelopeSender: string | null;
 } {
-  // Maileroo sends recipients as array, from in headers
+  // Maileroo sends recipients as array
   const recipients = data.recipients || [];
   const recipient = recipients[0] || '';
   
-  // Extract from header
+  // Extract from header - headers are map[string][]string
   const headers = data.headers || {};
-  const fromHeader = headers.From || [];
-  const fromRaw = fromHeader[0] || '';
+  const fromHeader = headers.From || headers.from || [];
+  const fromRaw = Array.isArray(fromHeader) ? fromHeader[0] : fromHeader || '';
   
   // Parse from field: "Name <email>" or just "email"
   const fromMatch = fromRaw.match(/(?:"?([^"<]+)"?\s*)?<?([^<>@\s]+@[^<>\s]+)>?/);
@@ -123,23 +126,29 @@ function parseMailerooPayload(data: any): {
   const fromEmail = fromMatch?.[2] || fromRaw;
   
   // Subject from headers
-  const subjectArray = headers.Subject || [];
-  const subject = subjectArray[0] || '(sem assunto)';
+  const subjectHeader = headers.Subject || headers.subject || [];
+  const subject = (Array.isArray(subjectHeader) ? subjectHeader[0] : subjectHeader) || '(sem assunto)';
   
-  // Body content
+  // Body content - Maileroo uses body.html and body.plaintext
   const body = data.body || {};
-  const htmlContent = body.html || '';
-  const textContent = body.plaintext || '';
+  const htmlContent = body.html || body.stripped_html || '';
+  const textContent = body.plaintext || body.stripped_plaintext || '';
   
-  // Security fields
+  // Security fields (Maileroo specific)
   const spfResult = data.spf_result || null;
-  const dkimResult = data.dkim_result || null;
+  // Note: dkim_result is boolean in Maileroo format
+  const dkimResult = typeof data.dkim_result === 'boolean' ? data.dkim_result : null;
   const isDmarcAligned = data.is_dmarc_aligned ?? null;
   const isSpam = data.is_spam ?? null;
   
   // URLs for validation and deletion
   const validationUrl = data.validation_url || null;
   const deletionUrl = data.deletion_url || null;
+  
+  // Additional Maileroo fields
+  const messageId = data.message_id || null;
+  const domain = data.domain || null;
+  const envelopeSender = data.envelope_sender || null;
   
   return {
     recipient,
@@ -154,7 +163,21 @@ function parseMailerooPayload(data: any): {
     isSpam,
     validationUrl,
     deletionUrl,
+    messageId,
+    domain,
+    envelopeSender,
   };
+}
+
+// Check if payload is Maileroo format
+function isMailerooFormat(data: any): boolean {
+  // Maileroo has specific fields: recipients (array), headers (object), body (object with html/plaintext)
+  return (
+    Array.isArray(data.recipients) && 
+    typeof data.headers === 'object' && 
+    typeof data.body === 'object' &&
+    (data.body.html !== undefined || data.body.plaintext !== undefined)
+  );
 }
 
 serve(async (req) => {
@@ -174,14 +197,13 @@ serve(async (req) => {
     // Parse incoming email from Maileroo webhook (JSON format)
     const contentType = req.headers.get('content-type') || '';
     let emailData: any = {};
-    let isMailerooFormat = false;
+    let isMaileroo = false;
 
     if (contentType.includes('application/json')) {
       emailData = await req.json();
-      // Detect Maileroo format by checking for specific fields
-      if (emailData.recipients && emailData.headers && emailData.body) {
-        isMailerooFormat = true;
-      }
+      // Detect Maileroo format using the helper function
+      isMaileroo = isMailerooFormat(emailData);
+      console.log('Detected format:', isMaileroo ? 'Maileroo' : 'Generic JSON');
     } else if (contentType.includes('multipart/form-data') || contentType.includes('application/x-www-form-urlencoded')) {
       // Legacy format support (Mailgun/SendGrid)
       const formData = await req.formData();
@@ -193,6 +215,7 @@ serve(async (req) => {
         'body-html': formData.get('body-html') || formData.get('html'),
         'body-plain': formData.get('body-plain') || formData.get('text'),
       };
+      console.log('Detected format: Form Data (Mailgun/SendGrid)');
     }
 
     console.log('Received email webhook:', JSON.stringify(emailData, null, 2));
@@ -204,7 +227,7 @@ serve(async (req) => {
     let htmlContent: string;
     let textContent: string;
 
-    if (isMailerooFormat) {
+    if (isMaileroo) {
       // Parse Maileroo format
       const parsed = parseMailerooPayload(emailData);
       recipient = parsed.recipient;

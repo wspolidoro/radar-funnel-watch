@@ -11,7 +11,8 @@ import {
   Mail,
   Globe,
   FileText,
-  Activity
+  Activity,
+  HelpCircle
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import {
@@ -39,6 +40,7 @@ const adminMenuItems = [
   { title: 'Logs de Email', url: '/admin/logs', icon: FileText },
   { title: 'Integrações', url: '/admin/integrations', icon: Blocks },
   { title: 'Config. Email', url: '/admin/email-setup', icon: Mail },
+  { title: 'Guia Maileroo', url: '/admin/maileroo', icon: HelpCircle },
   { title: 'Configurações', url: '/admin/settings', icon: Settings },
 ];
 
