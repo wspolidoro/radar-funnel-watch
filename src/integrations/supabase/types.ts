@@ -164,6 +164,50 @@ export type Database = {
         }
         Relationships: []
       }
+      connectivity_tests: {
+        Row: {
+          domain_id: string | null
+          error_message: string | null
+          id: string
+          latency_ms: number | null
+          received_at: string | null
+          sent_at: string | null
+          status: string | null
+          test_alias: string
+          user_id: string
+        }
+        Insert: {
+          domain_id?: string | null
+          error_message?: string | null
+          id?: string
+          latency_ms?: number | null
+          received_at?: string | null
+          sent_at?: string | null
+          status?: string | null
+          test_alias: string
+          user_id: string
+        }
+        Update: {
+          domain_id?: string | null
+          error_message?: string | null
+          id?: string
+          latency_ms?: number | null
+          received_at?: string | null
+          sent_at?: string | null
+          status?: string | null
+          test_alias?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "connectivity_tests_domain_id_fkey"
+            columns: ["domain_id"]
+            isOneToOne: false
+            referencedRelation: "email_domains"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       data_leak_alerts: {
         Row: {
           actual_domain: string
@@ -278,11 +322,14 @@ export type Database = {
       email_domains: {
         Row: {
           created_at: string
+          dns_status: string | null
+          dns_verified_at: string | null
           domain: string
           id: string
           is_active: boolean | null
           is_platform_domain: boolean | null
           is_verified: boolean | null
+          mx_records: Json | null
           provider: string
           updated_at: string
           user_id: string
@@ -290,11 +337,14 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          dns_status?: string | null
+          dns_verified_at?: string | null
           domain: string
           id?: string
           is_active?: boolean | null
           is_platform_domain?: boolean | null
           is_verified?: boolean | null
+          mx_records?: Json | null
           provider?: string
           updated_at?: string
           user_id: string
@@ -302,11 +352,14 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          dns_status?: string | null
+          dns_verified_at?: string | null
           domain?: string
           id?: string
           is_active?: boolean | null
           is_platform_domain?: boolean | null
           is_verified?: boolean | null
+          mx_records?: Json | null
           provider?: string
           updated_at?: string
           user_id?: string
@@ -373,6 +426,59 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      email_logs: {
+        Row: {
+          alias: string | null
+          domain: string | null
+          error_message: string | null
+          from_email: string | null
+          from_name: string | null
+          id: string
+          metadata: Json | null
+          newsletter_id: string | null
+          processing_time_ms: number | null
+          received_at: string | null
+          status: string | null
+          subject: string | null
+        }
+        Insert: {
+          alias?: string | null
+          domain?: string | null
+          error_message?: string | null
+          from_email?: string | null
+          from_name?: string | null
+          id?: string
+          metadata?: Json | null
+          newsletter_id?: string | null
+          processing_time_ms?: number | null
+          received_at?: string | null
+          status?: string | null
+          subject?: string | null
+        }
+        Update: {
+          alias?: string | null
+          domain?: string | null
+          error_message?: string | null
+          from_email?: string | null
+          from_name?: string | null
+          id?: string
+          metadata?: Json | null
+          newsletter_id?: string | null
+          processing_time_ms?: number | null
+          received_at?: string | null
+          status?: string | null
+          subject?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_logs_newsletter_id_fkey"
+            columns: ["newsletter_id"]
+            isOneToOne: false
+            referencedRelation: "captured_newsletters"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       email_seeds: {
         Row: {
