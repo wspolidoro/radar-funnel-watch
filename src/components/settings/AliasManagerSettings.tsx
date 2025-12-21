@@ -138,14 +138,14 @@ export function AliasManagerSettings() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['email-aliases'] });
-      toast.success('Alias criado com sucesso!', {
+      toast.success('Email de rastreamento criado!', {
         description: `Use ${data.alias} para se inscrever em newsletters`,
       });
       setIsOpen(false);
       resetForm();
     },
     onError: (error: Error) => {
-      toast.error('Erro ao criar alias', { description: error.message });
+      toast.error('Erro ao criar email', { description: error.message });
     },
   });
 
@@ -161,10 +161,10 @@ export function AliasManagerSettings() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['email-aliases'] });
-      toast.success('Alias removido');
+      toast.success('Email removido');
     },
     onError: (error: Error) => {
-      toast.error('Erro ao remover alias', { description: error.message });
+      toast.error('Erro ao remover email', { description: error.message });
     },
   });
 
@@ -180,10 +180,10 @@ export function AliasManagerSettings() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['email-aliases'] });
-      toast.success('Status do alias atualizado');
+      toast.success('Status atualizado');
     },
     onError: (error: Error) => {
-      toast.error('Erro ao atualizar alias', { description: error.message });
+      toast.error('Erro ao atualizar', { description: error.message });
     },
   });
 
@@ -218,24 +218,24 @@ export function AliasManagerSettings() {
         <div>
           <CardTitle className="flex items-center gap-2">
             <Mail className="h-5 w-5" />
-            Aliases de Email
+            Emails de Rastreamento
           </CardTitle>
           <CardDescription>
-            Gerencie seus emails de rastreamento para newsletters
+            Endereços únicos para monitorar cada newsletter que você acompanha
           </CardDescription>
         </div>
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
             <Button disabled={domains.length === 0}>
               <Plus className="w-4 h-4 mr-2" />
-              Novo Alias
+              Novo Email
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Criar Novo Alias</DialogTitle>
+              <DialogTitle>Criar Email de Rastreamento</DialogTitle>
               <DialogDescription>
-                Crie um email único para rastrear uma newsletter específica
+                Crie um endereço único para monitorar uma newsletter específica
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
@@ -298,7 +298,7 @@ export function AliasManagerSettings() {
                 disabled={!localPart || !selectedDomain || createAliasMutation.isPending}
                 className="w-full"
               >
-                {createAliasMutation.isPending ? 'Criando...' : 'Criar Alias'}
+                {createAliasMutation.isPending ? 'Criando...' : 'Criar Email'}
               </Button>
             </div>
           </DialogContent>
@@ -357,7 +357,7 @@ export function AliasManagerSettings() {
           <div className="text-center py-8 text-muted-foreground">
             <Mail className="w-12 h-12 mx-auto mb-4 opacity-50" />
             <p>Nenhum domínio configurado</p>
-            <p className="text-sm">Configure um domínio na aba "Domínios" para criar aliases</p>
+            <p className="text-sm">Configure um domínio na aba "Domínios" para criar emails de rastreamento</p>
           </div>
         ) : isLoading ? (
           <div className="flex items-center justify-center py-8">
@@ -366,13 +366,13 @@ export function AliasManagerSettings() {
         ) : aliases.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             <Mail className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p>Nenhum alias criado ainda</p>
-            <p className="text-sm">Clique em "Novo Alias" para começar</p>
+            <p>Nenhum email de rastreamento criado</p>
+            <p className="text-sm">Clique em "Novo Email" para começar a monitorar newsletters</p>
           </div>
         ) : filteredAliases.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p>Nenhum alias encontrado</p>
+            <p>Nenhum email encontrado</p>
             <p className="text-sm">Tente outro termo de busca</p>
           </div>
         ) : (
