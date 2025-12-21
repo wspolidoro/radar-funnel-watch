@@ -42,6 +42,7 @@ import AdminEmailProviderSetup from "./pages/admin/EmailProviderSetup";
 import AdminPlatformDomains from "./pages/admin/PlatformDomains";
 import AdminEmailLogs from "./pages/admin/EmailLogs";
 import AdminSystemHealth from "./pages/admin/SystemHealth";
+import AdminMailerooSetup from "./pages/admin/MailerooSetup";
 
 const queryClient = new QueryClient();
 
@@ -119,6 +120,7 @@ const App = () => (
               <Route path="logs" element={<AdminEmailLogs />} />
               <Route path="health" element={<AdminSystemHealth />} />
               <Route path="email-setup" element={<AdminEmailProviderSetup />} />
+              <Route path="maileroo" element={<AdminMailerooSetup />} />
               <Route path="settings" element={<Settings />} />
             </Route>
 
