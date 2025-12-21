@@ -305,6 +305,24 @@ serve(async (req) => {
 
     console.log('Email saved successfully:', newsletter.id);
 
+    // Trigger AI analysis asynchronously
+    try {
+      const analyzeUrl = `${supabaseUrl}/functions/v1/analyze-newsletter`;
+      fetch(analyzeUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${supabaseServiceKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ newsletterId: newsletter.id }),
+      }).catch(err => console.error('AI analysis trigger failed:', err));
+      
+      console.log('AI analysis triggered for newsletter:', newsletter.id);
+    } catch (analysisError) {
+      console.error('Failed to trigger AI analysis:', analysisError);
+      // Don't fail the request if AI analysis fails
+    }
+
     return new Response(JSON.stringify({ 
       success: true, 
       id: newsletter.id,
