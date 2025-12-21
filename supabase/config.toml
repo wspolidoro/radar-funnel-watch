@@ -35,3 +35,6 @@ verify_jwt = true
 
 [functions.test-email-connectivity]
 verify_jwt = true
+
+[functions.verify-dns-cron]
+verify_jwt = false

@@ -10,7 +10,8 @@ import {
   Settings,
   Mail,
   Globe,
-  FileText
+  FileText,
+  Activity
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import {
@@ -28,6 +29,7 @@ import { Badge } from '@/components/ui/badge';
 
 const adminMenuItems = [
   { title: 'Dashboard', url: '/admin', icon: LayoutDashboard },
+  { title: 'Saúde do Sistema', url: '/admin/health', icon: Activity },
   { title: 'Métricas SaaS', url: '/admin/metrics', icon: BarChart3 },
   { title: 'Clientes', url: '/admin/clients', icon: Building2 },
   { title: 'Alertas Vazamento', url: '/admin/alerts', icon: AlertTriangle },
