@@ -41,6 +41,7 @@ import AdminDataLeakAlerts from "./pages/admin/DataLeakAlerts";
 import AdminEmailProviderSetup from "./pages/admin/EmailProviderSetup";
 import AdminPlatformDomains from "./pages/admin/PlatformDomains";
 import AdminEmailLogs from "./pages/admin/EmailLogs";
+import AdminSystemHealth from "./pages/admin/SystemHealth";
 
 const queryClient = new QueryClient();
 
@@ -116,6 +117,7 @@ const App = () => (
               <Route path="integrations" element={<AdminIntegrations />} />
               <Route path="domains" element={<AdminPlatformDomains />} />
               <Route path="logs" element={<AdminEmailLogs />} />
+              <Route path="health" element={<AdminSystemHealth />} />
               <Route path="email-setup" element={<AdminEmailProviderSetup />} />
               <Route path="settings" element={<Settings />} />
             </Route>
