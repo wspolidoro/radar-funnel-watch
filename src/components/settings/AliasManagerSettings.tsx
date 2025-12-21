@@ -11,7 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import { Plus, Copy, Mail, CheckCircle, Clock, Trash2, ExternalLink, Loader2, Search, MailCheck, MailX, Inbox } from 'lucide-react';
+import { Plus, Copy, Mail, CheckCircle, Clock, Trash2, ExternalLink, Loader2, Search, MailCheck, MailX, Inbox, HelpCircle } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -213,12 +214,22 @@ export function AliasManagerSettings() {
   };
 
   return (
+    <TooltipProvider>
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
           <CardTitle className="flex items-center gap-2">
             <Mail className="h-5 w-5" />
             Emails de Rastreamento
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent side="right" className="max-w-xs">
+                <p className="font-medium mb-1">Como funciona?</p>
+                <p className="text-xs">Cada email de rastreamento é um endereço único que você usa para se inscrever em uma newsletter. Quando a empresa enviar emails, eles serão capturados automaticamente aqui.</p>
+              </TooltipContent>
+            </Tooltip>
           </CardTitle>
           <CardDescription>
             Endereços únicos para monitorar cada newsletter que você acompanha
@@ -441,5 +452,6 @@ export function AliasManagerSettings() {
         )}
       </CardContent>
     </Card>
+    </TooltipProvider>
   );
 }

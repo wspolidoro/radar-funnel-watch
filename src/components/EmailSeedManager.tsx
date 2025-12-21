@@ -10,7 +10,8 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { Mail, Plus, RefreshCw, Trash2, Settings2, CheckCircle, XCircle, Clock, Loader2 } from 'lucide-react';
+import { Mail, Plus, RefreshCw, Trash2, Settings2, CheckCircle, XCircle, Clock, Loader2, HelpCircle } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -217,6 +218,7 @@ export function EmailSeedManager() {
   };
 
   return (
+    <TooltipProvider>
     <div className="space-y-4">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
@@ -224,6 +226,15 @@ export function EmailSeedManager() {
             <CardTitle className="flex items-center gap-2">
               <Mail className="h-5 w-5" />
               Contas Conectadas
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent side="right" className="max-w-xs">
+                  <p className="font-medium mb-1">Quando usar?</p>
+                  <p className="text-xs">Use contas conectadas quando já tiver um email com newsletters inscritas. O sistema importa automaticamente via IMAP. Ideal para migrar histórico existente.</p>
+                </TooltipContent>
+              </Tooltip>
             </CardTitle>
             <CardDescription>
               Conecte suas caixas de entrada para importar newsletters automaticamente via IMAP
@@ -418,6 +429,7 @@ export function EmailSeedManager() {
           )}
         </CardContent>
       </Card>
+    </div>
 
       {/* Sync Password Dialog */}
       <Dialog open={isSyncDialogOpen} onOpenChange={setIsSyncDialogOpen}>
@@ -463,6 +475,6 @@ export function EmailSeedManager() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </TooltipProvider>
   );
 }
