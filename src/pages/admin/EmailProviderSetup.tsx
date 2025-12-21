@@ -1,8 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Copy, ExternalLink, Check, AlertTriangle, Mail, Globe, Server, Shield } from 'lucide-react';
+import { Copy, ExternalLink, Check, AlertTriangle, Mail, Globe, Server, Shield, Key, Settings2 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -35,10 +34,10 @@ const EmailProviderSetup = () => {
       <div>
         <h1 className="text-3xl font-bold flex items-center gap-3">
           <Mail className="h-8 w-8" />
-          Configurar Provedor de Email
+          Configurar Maileroo
         </h1>
         <p className="text-muted-foreground mt-1">
-          Configure Mailgun ou SendGrid para receber emails nos domínios da plataforma
+          Configure o Maileroo para enviar e receber emails nos domínios da plataforma
         </p>
       </div>
 
@@ -47,10 +46,10 @@ const EmailProviderSetup = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Server className="h-5 w-5" />
-            URL do Webhook
+            URL do Webhook (Inbound Routing)
           </CardTitle>
           <CardDescription>
-            Use esta URL para configurar o encaminhamento de emails no seu provedor
+            Use esta URL para configurar o encaminhamento de emails no Maileroo
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -61,193 +60,197 @@ const EmailProviderSetup = () => {
         </CardContent>
       </Card>
 
-      {/* Provider Tabs */}
-      <Tabs defaultValue="mailgun" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="mailgun" className="gap-2">
-            Mailgun
-          </TabsTrigger>
-          <TabsTrigger value="sendgrid" className="gap-2">
-            SendGrid
-          </TabsTrigger>
-        </TabsList>
-
-        {/* Mailgun Setup */}
-        <TabsContent value="mailgun" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Configuração do Mailgun</CardTitle>
-              <CardDescription>
-                Siga os passos abaixo para configurar o recebimento de emails via Mailgun
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Step 1 */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold">
-                    1
-                  </div>
-                  <h3 className="font-semibold text-lg">Criar conta e adicionar domínio</h3>
-                </div>
-                <div className="ml-11 space-y-2">
-                  <p className="text-muted-foreground">
-                    Acesse o Mailgun e adicione os domínios da plataforma:
-                  </p>
-                  <ul className="list-disc list-inside space-y-1 text-sm">
-                    <li><code className="bg-muted px-1 rounded">tracker.newsletterspy.io</code></li>
-                    <li><code className="bg-muted px-1 rounded">inbox.newsletterspy.io</code></li>
-                    <li><code className="bg-muted px-1 rounded">watch.newsletterspy.io</code></li>
-                    <li><code className="bg-muted px-1 rounded">capture.newsletterspy.io</code></li>
-                    <li><code className="bg-muted px-1 rounded">monitor.newsletterspy.io</code></li>
-                  </ul>
-                  <Button variant="outline" className="gap-2 mt-2" asChild>
-                    <a href="https://app.mailgun.com/app/sending/domains" target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="h-4 w-4" />
-                      Abrir Mailgun
-                    </a>
-                  </Button>
-                </div>
+      {/* Maileroo Setup Steps */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Configuração do Maileroo</CardTitle>
+          <CardDescription>
+            Siga os passos abaixo para configurar envio e recebimento de emails via Maileroo
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-8">
+          {/* Step 1 - Create Account */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold">
+                1
               </div>
+              <h3 className="font-semibold text-lg">Criar conta no Maileroo</h3>
+            </div>
+            <div className="ml-11 space-y-2">
+              <p className="text-muted-foreground">
+                Acesse o Maileroo e crie uma conta se ainda não tiver:
+              </p>
+              <Button variant="outline" className="gap-2" asChild>
+                <a href="https://app.maileroo.com" target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="h-4 w-4" />
+                  Acessar Maileroo
+                </a>
+              </Button>
+            </div>
+          </div>
 
-              {/* Step 2 */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold">
-                    2
-                  </div>
-                  <h3 className="font-semibold text-lg">Configurar registros DNS</h3>
-                </div>
-                <div className="ml-11 space-y-3">
-                  <p className="text-muted-foreground">
-                    Adicione os registros MX no DNS de cada domínio:
-                  </p>
-                  <div className="bg-muted p-4 rounded-lg space-y-2 font-mono text-sm">
-                    <p><span className="text-muted-foreground">Tipo:</span> MX</p>
-                    <p><span className="text-muted-foreground">Host:</span> @ (ou deixe em branco)</p>
-                    <p><span className="text-muted-foreground">Valor:</span> mxa.mailgun.org</p>
-                    <p><span className="text-muted-foreground">Prioridade:</span> 10</p>
-                  </div>
-                  <div className="bg-muted p-4 rounded-lg space-y-2 font-mono text-sm">
-                    <p><span className="text-muted-foreground">Tipo:</span> MX</p>
-                    <p><span className="text-muted-foreground">Host:</span> @ (ou deixe em branco)</p>
-                    <p><span className="text-muted-foreground">Valor:</span> mxb.mailgun.org</p>
-                    <p><span className="text-muted-foreground">Prioridade:</span> 20</p>
-                  </div>
-                </div>
+          {/* Step 2 - Add Domain */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold">
+                2
               </div>
+              <h3 className="font-semibold text-lg">Adicionar e verificar domínio</h3>
+            </div>
+            <div className="ml-11 space-y-3">
+              <p className="text-muted-foreground">
+                Vá para <strong>Sending → Domains</strong> e adicione os domínios da plataforma:
+              </p>
+              <ul className="list-disc list-inside space-y-1 text-sm">
+                <li><code className="bg-muted px-1 rounded">tracker.newsletterspy.io</code></li>
+                <li><code className="bg-muted px-1 rounded">inbox.newsletterspy.io</code></li>
+                <li><code className="bg-muted px-1 rounded">watch.newsletterspy.io</code></li>
+                <li><code className="bg-muted px-1 rounded">capture.newsletterspy.io</code></li>
+                <li><code className="bg-muted px-1 rounded">monitor.newsletterspy.io</code></li>
+              </ul>
+              <Button variant="outline" className="gap-2" asChild>
+                <a href="https://app.maileroo.com/sending/domains" target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="h-4 w-4" />
+                  Gerenciar Domínios
+                </a>
+              </Button>
+            </div>
+          </div>
 
-              {/* Step 3 */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold">
-                    3
-                  </div>
-                  <h3 className="font-semibold text-lg">Criar rota de recebimento</h3>
-                </div>
-                <div className="ml-11 space-y-3">
-                  <p className="text-muted-foreground">
-                    No Mailgun, vá para <strong>Receiving → Routes</strong> e crie uma rota:
-                  </p>
-                  <div className="bg-muted p-4 rounded-lg space-y-3 font-mono text-sm">
-                    <div>
-                      <p className="text-muted-foreground mb-1">Expression Type:</p>
-                      <p>catch_all()</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground mb-1">Actions:</p>
-                      <div className="flex items-center gap-2">
-                        <code className="flex-1 break-all">forward("{webhookUrl}")</code>
-                        <CopyButton text={`forward("${webhookUrl}")`} label="forward" />
-                      </div>
-                    </div>
-                  </div>
-                  <Button variant="outline" className="gap-2" asChild>
-                    <a href="https://app.mailgun.com/app/receiving/routes" target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="h-4 w-4" />
-                      Criar Rota no Mailgun
-                    </a>
-                  </Button>
-                </div>
+          {/* Step 3 - Configure DNS for Receiving */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold">
+                3
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+              <h3 className="font-semibold text-lg">Configurar DNS para recebimento</h3>
+            </div>
+            <div className="ml-11 space-y-3">
+              <p className="text-muted-foreground">
+                Adicione os registros MX no DNS de cada domínio para receber emails:
+              </p>
+              <div className="bg-muted p-4 rounded-lg space-y-2 font-mono text-sm">
+                <p><span className="text-muted-foreground">Tipo:</span> MX</p>
+                <p><span className="text-muted-foreground">Host:</span> @ (ou deixe em branco)</p>
+                <p><span className="text-muted-foreground">Valor:</span> mx.maileroo.com</p>
+                <p><span className="text-muted-foreground">Prioridade:</span> 10</p>
+              </div>
+              <div className="flex items-start gap-2 p-3 bg-warning/10 border border-warning/20 rounded-lg">
+                <AlertTriangle className="h-5 w-5 text-warning shrink-0 mt-0.5" />
+                <p className="text-sm">
+                  Aguarde a propagação DNS (pode levar até 48h). Verifique em <strong>Receiving → Domains</strong>.
+                </p>
+              </div>
+            </div>
+          </div>
 
-        {/* SendGrid Setup */}
-        <TabsContent value="sendgrid" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Configuração do SendGrid</CardTitle>
-              <CardDescription>
-                Siga os passos abaixo para configurar o recebimento de emails via SendGrid Inbound Parse
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Step 1 */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold">
-                    1
-                  </div>
-                  <h3 className="font-semibold text-lg">Configurar registros DNS</h3>
+          {/* Step 4 - Configure Inbound Routing */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold">
+                4
+              </div>
+              <h3 className="font-semibold text-lg">Configurar Inbound Routing</h3>
+            </div>
+            <div className="ml-11 space-y-3">
+              <p className="text-muted-foreground">
+                Vá para <strong>Receiving → Inbound Routing</strong> e crie uma regra:
+              </p>
+              <div className="bg-muted p-4 rounded-lg space-y-4 font-mono text-sm">
+                <div>
+                  <p className="text-muted-foreground mb-1">Domain:</p>
+                  <p>Selecione cada domínio adicionado</p>
                 </div>
-                <div className="ml-11 space-y-3">
-                  <p className="text-muted-foreground">
-                    Adicione o registro MX no DNS de cada domínio apontando para o SendGrid:
-                  </p>
-                  <div className="bg-muted p-4 rounded-lg space-y-2 font-mono text-sm">
-                    <p><span className="text-muted-foreground">Tipo:</span> MX</p>
-                    <p><span className="text-muted-foreground">Host:</span> @ (ou deixe em branco)</p>
-                    <p><span className="text-muted-foreground">Valor:</span> mx.sendgrid.net</p>
-                    <p><span className="text-muted-foreground">Prioridade:</span> 10</p>
+                <div>
+                  <p className="text-muted-foreground mb-1">Expression Type:</p>
+                  <p><Badge variant="secondary">Catch All</Badge></p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground mb-1">Action:</p>
+                  <p><Badge variant="secondary">Webhook</Badge></p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground mb-1">Webhook URL:</p>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 break-all">{webhookUrl}</code>
+                    <CopyButton text={webhookUrl} label="inbound-url" />
                   </div>
                 </div>
               </div>
+              <Button variant="outline" className="gap-2" asChild>
+                <a href="https://app.maileroo.com/receiving/routing" target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="h-4 w-4" />
+                  Configurar Inbound Routing
+                </a>
+              </Button>
+            </div>
+          </div>
 
-              {/* Step 2 */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold">
-                    2
-                  </div>
-                  <h3 className="font-semibold text-lg">Configurar Inbound Parse</h3>
+          {/* Step 5 - Create Sending Key */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold">
+                5
+              </div>
+              <h3 className="font-semibold text-lg">Criar Sending Key (API Key)</h3>
+            </div>
+            <div className="ml-11 space-y-3">
+              <p className="text-muted-foreground">
+                Vá para <strong>Sending → Sending Keys</strong> e crie uma chave API para envio de emails:
+              </p>
+              <div className="bg-muted p-4 rounded-lg space-y-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <Key className="h-4 w-4 text-muted-foreground" />
+                  <span>Nome sugerido: <code className="bg-background px-1 rounded">newsletter-tracker-production</code></span>
                 </div>
-                <div className="ml-11 space-y-3">
-                  <p className="text-muted-foreground">
-                    Acesse <strong>Settings → Inbound Parse</strong> no SendGrid e adicione:
-                  </p>
-                  <div className="bg-muted p-4 rounded-lg space-y-3 font-mono text-sm">
-                    <div>
-                      <p className="text-muted-foreground mb-1">Hostname:</p>
-                      <p>tracker.newsletterspy.io</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground mb-1">Destination URL:</p>
-                      <div className="flex items-center gap-2">
-                        <code className="flex-1 break-all">{webhookUrl}</code>
-                        <CopyButton text={webhookUrl} label="sendgrid-url" />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-2 p-3 bg-warning/10 border border-warning/20 rounded-lg">
-                    <AlertTriangle className="h-5 w-5 text-warning shrink-0 mt-0.5" />
-                    <p className="text-sm">
-                      Repita para cada domínio da plataforma (inbox, watch, capture, monitor)
-                    </p>
-                  </div>
-                  <Button variant="outline" className="gap-2" asChild>
-                    <a href="https://app.sendgrid.com/settings/parse" target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="h-4 w-4" />
-                      Abrir SendGrid Inbound Parse
-                    </a>
-                  </Button>
+                <div className="flex items-center gap-2">
+                  <Settings2 className="h-4 w-4 text-muted-foreground" />
+                  <span>Permissões: Selecione os domínios adicionados</span>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+              <div className="flex items-start gap-2 p-3 bg-primary/10 border border-primary/20 rounded-lg">
+                <Shield className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                <p className="text-sm">
+                  Copie a API Key gerada e adicione como secret <code className="bg-muted px-1 rounded">MAILEROO_API_KEY</code> nas configurações do projeto.
+                </p>
+              </div>
+              <Button variant="outline" className="gap-2" asChild>
+                <a href="https://app.maileroo.com/sending/keys" target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="h-4 w-4" />
+                  Gerenciar Sending Keys
+                </a>
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* API Documentation */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ExternalLink className="h-5 w-5" />
+            Documentação e Suporte
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Button variant="outline" className="justify-start gap-2" asChild>
+              <a href="https://app.maileroo.com/support" target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="h-4 w-4" />
+                Central de Suporte
+              </a>
+            </Button>
+            <Button variant="outline" className="justify-start gap-2" asChild>
+              <a href="https://docs.maileroo.com" target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="h-4 w-4" />
+                Documentação da API
+              </a>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Status Card */}
       <Card>
@@ -272,6 +275,13 @@ const EmailProviderSetup = () => {
                 <span>inbox.newsletterspy.io</span>
               </div>
               <Badge variant="outline">Aguardando configuração DNS</Badge>
+            </div>
+            <div className="flex items-center justify-between p-3 border rounded-lg">
+              <div className="flex items-center gap-3">
+                <Key className="h-5 w-5 text-muted-foreground" />
+                <span>MAILEROO_API_KEY</span>
+              </div>
+              <Badge className="bg-success">Configurada</Badge>
             </div>
             <div className="flex items-center justify-between p-3 border rounded-lg">
               <div className="flex items-center gap-3">

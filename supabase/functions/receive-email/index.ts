@@ -93,6 +93,70 @@ function countWords(text: string): number {
   return text.split(/\s+/).filter(word => word.length > 0).length;
 }
 
+// Parse Maileroo webhook format
+function parseMailerooPayload(data: any): {
+  recipient: string;
+  fromEmail: string;
+  fromName: string | null;
+  subject: string;
+  htmlContent: string;
+  textContent: string;
+  spfResult: string | null;
+  dkimResult: string | null;
+  isDmarcAligned: boolean | null;
+  isSpam: boolean | null;
+  validationUrl: string | null;
+  deletionUrl: string | null;
+} {
+  // Maileroo sends recipients as array, from in headers
+  const recipients = data.recipients || [];
+  const recipient = recipients[0] || '';
+  
+  // Extract from header
+  const headers = data.headers || {};
+  const fromHeader = headers.From || [];
+  const fromRaw = fromHeader[0] || '';
+  
+  // Parse from field: "Name <email>" or just "email"
+  const fromMatch = fromRaw.match(/(?:"?([^"<]+)"?\s*)?<?([^<>@\s]+@[^<>\s]+)>?/);
+  const fromName = fromMatch?.[1]?.trim() || null;
+  const fromEmail = fromMatch?.[2] || fromRaw;
+  
+  // Subject from headers
+  const subjectArray = headers.Subject || [];
+  const subject = subjectArray[0] || '(sem assunto)';
+  
+  // Body content
+  const body = data.body || {};
+  const htmlContent = body.html || '';
+  const textContent = body.plaintext || '';
+  
+  // Security fields
+  const spfResult = data.spf_result || null;
+  const dkimResult = data.dkim_result || null;
+  const isDmarcAligned = data.is_dmarc_aligned ?? null;
+  const isSpam = data.is_spam ?? null;
+  
+  // URLs for validation and deletion
+  const validationUrl = data.validation_url || null;
+  const deletionUrl = data.deletion_url || null;
+  
+  return {
+    recipient,
+    fromEmail,
+    fromName,
+    subject,
+    htmlContent,
+    textContent,
+    spfResult,
+    dkimResult,
+    isDmarcAligned,
+    isSpam,
+    validationUrl,
+    deletionUrl,
+  };
+}
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -104,13 +168,19 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Parse incoming email from Mailgun/SendGrid webhook
+    // Parse incoming email from Maileroo webhook (JSON format)
     const contentType = req.headers.get('content-type') || '';
     let emailData: any = {};
+    let isMailerooFormat = false;
 
     if (contentType.includes('application/json')) {
       emailData = await req.json();
+      // Detect Maileroo format by checking for specific fields
+      if (emailData.recipients && emailData.headers && emailData.body) {
+        isMailerooFormat = true;
+      }
     } else if (contentType.includes('multipart/form-data') || contentType.includes('application/x-www-form-urlencoded')) {
+      // Legacy format support (Mailgun/SendGrid)
       const formData = await req.formData();
       emailData = {
         recipient: formData.get('recipient') || formData.get('to'),
@@ -119,18 +189,56 @@ serve(async (req) => {
         subject: formData.get('subject'),
         'body-html': formData.get('body-html') || formData.get('html'),
         'body-plain': formData.get('body-plain') || formData.get('text'),
-        'stripped-html': formData.get('stripped-html'),
-        'stripped-text': formData.get('stripped-text'),
       };
     }
 
     console.log('Received email webhook:', JSON.stringify(emailData, null, 2));
 
-    const recipient = emailData.recipient || emailData.to || '';
-    const fromEmail = emailData.from || emailData.sender || '';
-    const subject = emailData.subject || '(sem assunto)';
-    const htmlContent = emailData['body-html'] || emailData.html || '';
-    const textContent = emailData['body-plain'] || emailData.text || '';
+    let recipient: string;
+    let fromEmail: string;
+    let fromName: string | null;
+    let subject: string;
+    let htmlContent: string;
+    let textContent: string;
+
+    if (isMailerooFormat) {
+      // Parse Maileroo format
+      const parsed = parseMailerooPayload(emailData);
+      recipient = parsed.recipient;
+      fromEmail = parsed.fromEmail;
+      fromName = parsed.fromName;
+      subject = parsed.subject;
+      htmlContent = parsed.htmlContent;
+      textContent = parsed.textContent;
+
+      // Validate the email with Maileroo if validation_url is present
+      if (parsed.validationUrl) {
+        try {
+          console.log('Validating email with Maileroo:', parsed.validationUrl);
+          await fetch(parsed.validationUrl, { method: 'POST' });
+        } catch (validationError) {
+          console.error('Failed to validate with Maileroo:', validationError);
+        }
+      }
+
+      // Log security info
+      console.log('Email security info:', {
+        spf: parsed.spfResult,
+        dkim: parsed.dkimResult,
+        dmarc_aligned: parsed.isDmarcAligned,
+        is_spam: parsed.isSpam,
+      });
+    } else {
+      // Legacy format
+      recipient = emailData.recipient || emailData.to || '';
+      const fromRaw = emailData.from || emailData.sender || '';
+      const fromMatch = fromRaw.match(/(?:"?([^"<]+)"?\s*)?<?([^<>@\s]+@[^<>\s]+)>?/);
+      fromName = fromMatch?.[1]?.trim() || null;
+      fromEmail = fromMatch?.[2] || fromRaw;
+      subject = emailData.subject || '(sem assunto)';
+      htmlContent = emailData['body-html'] || emailData.html || '';
+      textContent = emailData['body-plain'] || emailData.text || '';
+    }
 
     if (!recipient) {
       console.error('No recipient found in webhook data');
@@ -211,11 +319,6 @@ serve(async (req) => {
       }
     }
 
-    // Extract sender info
-    const fromMatch = fromEmail.match(/(?:"?([^"<]+)"?\s*)?<?([^<>@\s]+@[^<>\s]+)>?/);
-    const fromName = fromMatch?.[1]?.trim() || null;
-    const fromAddress = fromMatch?.[2] || fromEmail;
-
     // Analyze email content
     const confirmationLink = extractConfirmationLink(htmlContent, textContent);
     const optinStatus = detectOptinStatus(subject, htmlContent, textContent);
@@ -244,7 +347,7 @@ serve(async (req) => {
             user_id: userId,
             email: alias,
             name: aliasData?.name || localPart,
-            provider: 'webhook',
+            provider: 'maileroo',
             is_active: true,
           })
           .select()
@@ -263,7 +366,7 @@ serve(async (req) => {
         seed_id: seedId,
         alias_id: aliasId,
         subject: subject,
-        from_email: fromAddress,
+        from_email: fromEmail,
         from_name: fromName,
         html_content: htmlContent,
         text_content: textContent,
@@ -293,7 +396,7 @@ serve(async (req) => {
 
     if (!aliasData?.first_email_at) {
       updateData.first_email_at = new Date().toISOString();
-      updateData.sender_name = fromName || fromAddress;
+      updateData.sender_name = fromName || fromEmail;
     }
 
     if (aliasId) {
@@ -320,7 +423,6 @@ serve(async (req) => {
       console.log('AI analysis triggered for newsletter:', newsletter.id);
     } catch (analysisError) {
       console.error('Failed to trigger AI analysis:', analysisError);
-      // Don't fail the request if AI analysis fails
     }
 
     return new Response(JSON.stringify({ 
