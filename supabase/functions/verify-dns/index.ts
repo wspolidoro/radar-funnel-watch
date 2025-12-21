@@ -89,6 +89,35 @@ serve(async (req) => {
       if (updateError) {
         console.error('Error updating domain:', updateError);
       }
+
+      // Send notification if DNS verification failed
+      if (dnsStatus !== 'verified') {
+        console.log('DNS verification failed, sending notification...');
+        
+        // Get domain owner info
+        const { data: domainData } = await supabase
+          .from('email_domains')
+          .select('user_id')
+          .eq('id', domainId)
+          .single();
+
+        if (domainData?.user_id) {
+          // Create a data_leak_alert as a notification (reusing existing table)
+          await supabase
+            .from('data_leak_alerts')
+            .insert({
+              user_id: domainData.user_id,
+              from_email: `dns-check@${domain}`,
+              actual_domain: domain,
+              expected_domain: expectedMX,
+              severity: dnsStatus === 'no_records' ? 'critical' : 'warning',
+              is_notified: false,
+              is_read: false,
+            });
+
+          console.log('DNS failure notification created for domain:', domain);
+        }
+      }
     }
 
     console.log('DNS verification result:', result);
