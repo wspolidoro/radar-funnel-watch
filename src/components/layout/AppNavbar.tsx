@@ -40,13 +40,13 @@ export const AppNavbar = () => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => navigate('/app/reports/new')}>
-                <FileText className="h-4 w-4 mr-2" />
-                Novo Relatório
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate('/app/tracking/new')}>
+              <DropdownMenuItem onClick={() => navigate('/app/acompanhamentos/novo')}>
                 <Radar className="h-4 w-4 mr-2" />
                 Novo Acompanhamento
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate('/app/relatorios/novo')}>
+                <FileText className="h-4 w-4 mr-2" />
+                Novo Relatório
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -78,7 +78,7 @@ export const AppNavbar = () => {
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => navigate('/settings')}>
+              <DropdownMenuItem onClick={() => navigate('/app/configuracoes')}>
                 Configurações
               </DropdownMenuItem>
               <DropdownMenuItem onClick={logout}>
