@@ -28,6 +28,7 @@ import Settings from "./pages/Settings";
 import CapturedNewsletters from "./pages/CapturedNewsletters";
 import Analytics from "./pages/Analytics";
 import ClientAlerts from "./pages/app/ClientAlerts";
+import Acompanhamentos from "./pages/Acompanhamentos";
 
 // Admin SaaS Pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -89,17 +90,36 @@ const App = () => (
               </ProtectedRoute>
             }>
               <Route index element={<Dashboard />} />
-              <Route path="senders" element={<Senders />} />
-              <Route path="senders/:email" element={<SenderDetails />} />
-              <Route path="library" element={<Library />} />
-              <Route path="newsletters" element={<CapturedNewsletters />} />
-              <Route path="analytics" element={<Analytics />} />
-              <Route path="funnels" element={<Funnels />} />
-              <Route path="reports" element={<Reports />} />
-              <Route path="reports/new" element={<NewReport />} />
-              <Route path="tracking/new" element={<NewTracking />} />
-              <Route path="alerts" element={<ClientAlerts />} />
-              <Route path="settings" element={<Settings />} />
+              
+              {/* Acompanhamentos routes */}
+              <Route path="acompanhamentos" element={<Acompanhamentos />} />
+              <Route path="acompanhamentos/novo" element={<NewTracking />} />
+              <Route path="acompanhamentos/remetentes" element={<Senders />} />
+              <Route path="acompanhamentos/remetentes/:email" element={<SenderDetails />} />
+              <Route path="acompanhamentos/newsletters" element={<CapturedNewsletters />} />
+              <Route path="acompanhamentos/funis" element={<Funnels />} />
+              <Route path="acompanhamentos/analytics" element={<Analytics />} />
+              
+              {/* Relatórios */}
+              <Route path="relatorios" element={<Reports />} />
+              <Route path="relatorios/novo" element={<NewReport />} />
+              
+              {/* Alertas e Configurações */}
+              <Route path="alertas" element={<ClientAlerts />} />
+              <Route path="configuracoes" element={<Settings />} />
+
+              {/* Legacy redirects */}
+              <Route path="senders" element={<Navigate to="/app/acompanhamentos/remetentes" replace />} />
+              <Route path="senders/:email" element={<Navigate to="/app/acompanhamentos/remetentes" replace />} />
+              <Route path="library" element={<Navigate to="/app/acompanhamentos/newsletters" replace />} />
+              <Route path="newsletters" element={<Navigate to="/app/acompanhamentos/newsletters" replace />} />
+              <Route path="analytics" element={<Navigate to="/app/acompanhamentos/analytics" replace />} />
+              <Route path="funnels" element={<Navigate to="/app/acompanhamentos/funis" replace />} />
+              <Route path="reports" element={<Navigate to="/app/relatorios" replace />} />
+              <Route path="reports/new" element={<Navigate to="/app/relatorios/novo" replace />} />
+              <Route path="tracking/new" element={<Navigate to="/app/acompanhamentos/novo" replace />} />
+              <Route path="alerts" element={<Navigate to="/app/alertas" replace />} />
+              <Route path="settings" element={<Navigate to="/app/configuracoes" replace />} />
             </Route>
 
             {/* Admin SaaS Routes - /admin/* */}
