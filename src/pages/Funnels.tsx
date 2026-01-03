@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { 
   GitBranch, Eye, Download, Plus, Mail, Clock, TrendingUp, Filter, 
-  Target, Loader2, Calendar, Tag, Sparkles, Palette
+  Target, Loader2, Calendar, Tag, Sparkles, Palette, Pencil, Trash2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -100,6 +100,8 @@ const Funnels = () => {
   const [viewingEmail, setViewingEmail] = useState<Email | null>(null);
   const [senderFilter, setSenderFilter] = useState('all');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editingFunnel, setEditingFunnel] = useState<EmailFunnel | null>(null);
   const [newFunnelName, setNewFunnelName] = useState('');
   const [newFunnelDescription, setNewFunnelDescription] = useState('');
   const [newFunnelColor, setNewFunnelColor] = useState('#3b82f6');
@@ -237,7 +239,114 @@ const Funnels = () => {
     setNewFunnelDescription('');
     setNewFunnelColor('#3b82f6');
     setNewFunnelEmailIds([]);
+    setEditingFunnel(null);
   };
+
+  // Open edit dialog for a funnel
+  const openEditDialog = (funnel: EmailFunnel) => {
+    setEditingFunnel(funnel);
+    setNewFunnelName(funnel.name);
+    setNewFunnelDescription(funnel.description || '');
+    setNewFunnelColor(funnel.color);
+    setNewFunnelEmailIds(funnel.email_ids || []);
+    setIsEditOpen(true);
+    setSelectedFunnel(null);
+  };
+
+  // Update funnel mutation
+  const updateMutation = useMutation({
+    mutationFn: async () => {
+      if (!user || !editingFunnel || !newFunnelName.trim() || newFunnelEmailIds.length === 0) {
+        throw new Error('Preencha o nome e selecione pelo menos um email');
+      }
+
+      // Get email details for the selected emails
+      const { data: emails, error: emailsError } = await supabase
+        .from('captured_newsletters')
+        .select('id, from_email, from_name, received_at')
+        .in('id', newFunnelEmailIds)
+        .order('received_at', { ascending: true });
+      
+      if (emailsError) throw emailsError;
+      if (!emails || emails.length === 0) throw new Error('Emails não encontrados');
+
+      // Reorder emails based on user selection
+      const orderedEmails = newFunnelEmailIds
+        .map(id => emails.find(e => e.id === id))
+        .filter((e): e is typeof emails[0] => e !== undefined);
+
+      const firstEmail = orderedEmails[0];
+      const lastEmail = orderedEmails[orderedEmails.length - 1];
+
+      // Calculate average interval based on user order
+      let avgInterval = null;
+      if (orderedEmails.length > 1) {
+        let totalHours = 0;
+        for (let i = 1; i < orderedEmails.length; i++) {
+          totalHours += Math.abs(differenceInHours(
+            new Date(orderedEmails[i].received_at),
+            new Date(orderedEmails[i - 1].received_at)
+          ));
+        }
+        avgInterval = Math.round(totalHours / (orderedEmails.length - 1));
+      }
+
+      // Get sender info from first email
+      const senderEmail = firstEmail.from_email;
+      const senderName = firstEmail.from_name;
+
+      const { error } = await supabase
+        .from('email_funnels')
+        .update({
+          name: newFunnelName.trim(),
+          description: newFunnelDescription.trim() || null,
+          sender_email: senderEmail,
+          sender_name: senderName,
+          email_ids: newFunnelEmailIds,
+          color: newFunnelColor,
+          total_emails: newFunnelEmailIds.length,
+          first_email_at: firstEmail.received_at,
+          last_email_at: lastEmail.received_at,
+          avg_interval_hours: avgInterval,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', editingFunnel.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['email-funnels'] });
+      queryClient.invalidateQueries({ queryKey: ['funnel-builder-emails'] });
+      queryClient.invalidateQueries({ queryKey: ['funnel-emails'] });
+      setIsEditOpen(false);
+      resetCreateForm();
+      toast.success('Funil atualizado com sucesso!');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
+  // Delete funnel mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (funnelId: string) => {
+      const { error } = await supabase
+        .from('email_funnels')
+        .delete()
+        .eq('id', funnelId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['email-funnels'] });
+      setIsEditOpen(false);
+      resetCreateForm();
+      toast.success('Funil excluído com sucesso!');
+    },
+    onError: () => {
+      toast.error('Erro ao excluir funil');
+    },
+  });
 
   // Auto-detect funnels
   const detectFunnels = async () => {
@@ -591,12 +700,22 @@ const Funnels = () => {
           {selectedFunnel && (
             <>
               <SheetHeader>
-                <div className="flex items-center gap-3">
-                  <div 
-                    className="w-4 h-4 rounded-full" 
-                    style={{ backgroundColor: selectedFunnel.color }}
-                  />
-                  <SheetTitle>{selectedFunnel.name}</SheetTitle>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div 
+                      className="w-4 h-4 rounded-full" 
+                      style={{ backgroundColor: selectedFunnel.color }}
+                    />
+                    <SheetTitle>{selectedFunnel.name}</SheetTitle>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => openEditDialog(selectedFunnel)}
+                  >
+                    <Pencil className="h-4 w-4 mr-2" />
+                    Editar
+                  </Button>
                 </div>
                 <SheetDescription>
                   {selectedFunnel.sender_name || selectedFunnel.sender_email} • {selectedFunnel.total_emails} e-mails
@@ -748,6 +867,116 @@ const Funnels = () => {
         open={!!viewingEmail}
         onOpenChange={(open) => !open && setViewingEmail(null)}
       />
+
+      {/* Edit Funnel Dialog */}
+      <Dialog open={isEditOpen} onOpenChange={(open) => {
+        setIsEditOpen(open);
+        if (!open) resetCreateForm();
+      }}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Editar Funil</DialogTitle>
+            <DialogDescription>
+              Modifique as informações e reorganize os emails do funil
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="flex-1 overflow-y-auto">
+            <div className="space-y-6 py-4">
+              {/* Funnel Info */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Nome do Funil *</Label>
+                  <Input
+                    placeholder="Ex: Onboarding da Empresa X"
+                    value={newFunnelName}
+                    onChange={(e) => setNewFunnelName(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Cor do Funil</Label>
+                  <div className="flex gap-2">
+                    {colorOptions.map(c => (
+                      <button
+                        key={c.value}
+                        type="button"
+                        className={cn(
+                          "w-8 h-8 rounded-full border-2 transition-all",
+                          newFunnelColor === c.value ? "border-foreground scale-110" : "border-transparent"
+                        )}
+                        style={{ backgroundColor: c.value }}
+                        onClick={() => setNewFunnelColor(c.value)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Descrição (opcional)</Label>
+                <Textarea
+                  placeholder="Descreva o objetivo ou características deste funil..."
+                  value={newFunnelDescription}
+                  onChange={(e) => setNewFunnelDescription(e.target.value)}
+                  rows={2}
+                />
+              </div>
+
+              {/* Funnel Builder */}
+              <div className="border-t pt-4">
+                <FunnelBuilder
+                  selectedEmailIds={newFunnelEmailIds}
+                  onEmailsChange={setNewFunnelEmailIds}
+                  funnelColor={newFunnelColor}
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="border-t pt-4">
+            <div className="flex items-center gap-4 w-full justify-between">
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="destructive" 
+                  size="sm"
+                  onClick={() => {
+                    if (editingFunnel && confirm('Tem certeza que deseja excluir este funil?')) {
+                      deleteMutation.mutate(editingFunnel.id);
+                    }
+                  }}
+                  disabled={deleteMutation.isPending}
+                >
+                  {deleteMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <Trash2 className="h-4 w-4 mr-2" />
+                  )}
+                  Excluir
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                  {newFunnelEmailIds.length > 0 && (
+                    <span>{newFunnelEmailIds.length} email(s) selecionado(s)</span>
+                  )}
+                </span>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setIsEditOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button 
+                  onClick={() => updateMutation.mutate()}
+                  disabled={updateMutation.isPending || !newFunnelName.trim() || newFunnelEmailIds.length === 0}
+                >
+                  {updateMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : null}
+                  Salvar Alterações
+                </Button>
+              </div>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
