@@ -66,8 +66,28 @@ const Onboarding = () => {
     mutationFn: async () => {
       if (!user) throw new Error('Não autenticado');
       
+      const cleanDomain = customDomain.toLowerCase().trim().replace(/^https?:\/\//, '').replace(/\/$/, '');
+      if (!cleanDomain.includes('.')) throw new Error('Domínio inválido');
+
+      // 1. Create the custom domain first
+      const { data: domainData, error: domainError } = await supabase
+        .from('email_domains')
+        .insert({
+          user_id: user.id,
+          domain: cleanDomain,
+          provider: 'maileroo',
+          is_verified: false,
+          is_active: true,
+          is_platform_domain: false
+        })
+        .select()
+        .single();
+
+      if (domainError) throw domainError;
+
+      // 2. Create the first alias
       const localPart = generateUniqueIdentifier(trackingName);
-      const alias = `${localPart}@${selectedDomain}`;
+      const alias = `${localPart}@${cleanDomain}`;
       
       const { data, error } = await supabase
         .from('email_aliases')
@@ -76,7 +96,7 @@ const Onboarding = () => {
           name: trackingName.trim(),
           alias: alias,
           local_part: localPart,
-          domain: selectedDomain,
+          domain: cleanDomain,
           description: `Primeiro rastreamento: ${trackingName}`,
         })
         .select()
@@ -86,6 +106,14 @@ const Onboarding = () => {
       return data;
     },
     onSuccess: (data) => {
+      toast({ 
+        title: 'Domínio e Rastreamento configurados!',
+        description: `Use ${data.alias} para sua primeira análise.`
+      });
+      queryClient.invalidateQueries({ queryKey: ['email-domains'] });
+      queryClient.invalidateQueries({ queryKey: ['email-aliases'] });
+      navigate('/app/settings?tab=domains'); // Redirect to settings to verify DNS
+    },
       toast({ 
         title: 'Email de rastreamento criado!',
         description: `Use ${data.alias} para se inscrever em newsletters.`
