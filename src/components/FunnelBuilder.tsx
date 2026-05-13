@@ -24,7 +24,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { 
   Search, Filter, Inbox, GitBranch, ArrowRight, 
-  Clock, Mail, Trash2, X, Plus, Eye 
+  Clock, Mail, Trash2, X, Plus, Eye, Sparkles,
+  LayoutGrid, List
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
