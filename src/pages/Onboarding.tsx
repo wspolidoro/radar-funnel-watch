@@ -387,8 +387,22 @@ const Onboarding = () => {
                     </Button>
                   </div>
                   {dnsStatus === 'incorrect' && (
-                    <p className="text-xs text-destructive flex items-center gap-1 mt-1">
-                      <AlertCircle className="h-3 w-3" /> Registros MX ainda não detectados. Verifique no painel do Maileroo.
+                    <div className="flex flex-col gap-2 mt-1">
+                      <p className="text-xs text-destructive flex items-center gap-1">
+                        <AlertCircle className="h-3 w-3" /> Registros MX ainda não detectados. Verifique no painel do Maileroo.
+                      </p>
+                    </div>
+                  )}
+                  {dnsStatus === 'no_records' && (
+                    <div className="flex flex-col gap-2 mt-1">
+                      <p className="text-xs text-amber-600 flex items-center gap-1">
+                        <Info className="h-3 w-3" /> Domínio sem registros MX. Configure-os para continuar.
+                      </p>
+                    </div>
+                  )}
+                  {dnsStatus === 'verified' && (
+                    <p className="text-xs text-success flex items-center gap-1 mt-1">
+                      <CheckCircle2 className="h-3 w-3" /> Configuração validada com sucesso!
                     </p>
                   )}
                   <p className="text-xs text-muted-foreground">
