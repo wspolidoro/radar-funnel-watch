@@ -131,7 +131,8 @@ export const FunnelBuilder: React.FC<FunnelBuilderProps> = ({
         .select(`
           id, from_email, from_name, subject, html_content, 
           received_at, category, ctas, main_topics, 
-          marketing_insights, target_audience, email_type, sentiment
+          marketing_insights, target_audience, email_type, sentiment,
+          alias_id
         `)
         .order('received_at', { ascending: false });
 
