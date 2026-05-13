@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle2, ArrowRight, ArrowLeft, Mail, Sparkles } from 'lucide-react';
+import { CheckCircle2, ArrowRight, ArrowLeft, Mail, Sparkles, Globe, ShieldCheck, Copy, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
