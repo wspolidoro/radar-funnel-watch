@@ -125,7 +125,11 @@ export const FunnelBuilder: React.FC<FunnelBuilderProps> = ({
     queryFn: async () => {
       const { data, error } = await supabase
         .from('captured_newsletters')
-        .select('id, from_email, from_name, subject, html_content, received_at, category, ctas')
+        .select(`
+          id, from_email, from_name, subject, html_content, 
+          received_at, category, ctas, main_topics, 
+          marketing_insights, target_audience, email_type, sentiment
+        `)
         .order('received_at', { ascending: false });
 
       if (error) throw error;
