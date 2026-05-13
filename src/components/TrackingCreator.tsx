@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -8,7 +9,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Copy, Check, Mail, Globe, Loader2, ArrowRight, Sparkles, Settings } from 'lucide-react';
 
@@ -29,14 +29,13 @@ export const TrackingCreator = ({ onTrackingCreated }: TrackingCreatorProps) => 
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   
   const [name, setName] = useState('');
   const [selectedDomain, setSelectedDomain] = useState<string>('');
   const [generatedEmail, setGeneratedEmail] = useState<string>('');
   const [copied, setCopied] = useState(false);
   const [step, setStep] = useState<'input' | 'generated'>('input');
-  const [showAddDomain, setShowAddDomain] = useState(false);
-  const [newDomain, setNewDomain] = useState('');
 
   // Fetch available domains (platform + user's own)
   const { data: domains, isLoading: domainsLoading } = useQuery({
@@ -174,46 +173,6 @@ export const TrackingCreator = ({ onTrackingCreated }: TrackingCreatorProps) => 
     }
   };
 
-  // Add custom domain mutation
-  const addDomainMutation = useMutation({
-    mutationFn: async () => {
-      if (!user || !newDomain.trim()) throw new Error('Dados inválidos');
-
-      const { data, error } = await supabase
-        .from('email_domains')
-        .insert({
-          user_id: user.id,
-          domain: newDomain.trim().toLowerCase(),
-          provider: 'custom',
-          is_verified: false,
-          is_active: true,
-          is_platform_domain: false,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: (data) => {
-      toast({
-        title: 'Domínio adicionado!',
-        description: 'Configure o DNS para ativar o recebimento de emails.',
-      });
-      queryClient.invalidateQueries({ queryKey: ['available-domains'] });
-      setSelectedDomain(data.domain);
-      setNewDomain('');
-      setShowAddDomain(false);
-    },
-    onError: (error: Error) => {
-      toast({
-        title: 'Erro ao adicionar domínio',
-        description: error.message || 'Tente novamente.',
-        variant: 'destructive',
-      });
-    },
-  });
-
   const platformDomains = domains?.filter(d => d.is_platform_domain) || [];
   const userDomains = domains?.filter(d => !d.is_platform_domain) || [];
 
@@ -244,7 +203,7 @@ export const TrackingCreator = ({ onTrackingCreated }: TrackingCreatorProps) => 
 
             {/* Step 2: Select Domain */}
             <div className="space-y-2">
-              <Label>Selecionar Domínio</Label>
+              <Label>Selecionar Domínio de Destino</Label>
               <Select value={selectedDomain} onValueChange={setSelectedDomain}>
                 <SelectTrigger>
                   <SelectValue placeholder="Escolha um domínio para o email" />
@@ -300,15 +259,15 @@ export const TrackingCreator = ({ onTrackingCreated }: TrackingCreatorProps) => 
                     </div>
                   )}
 
-                  {/* Add custom domain option */}
+                  {/* Manage domains link */}
                   <div className="border-t mt-2 pt-2">
                     <button
                       type="button"
                       className="w-full px-2 py-2 text-left text-sm hover:bg-muted rounded-md flex items-center gap-2 text-primary"
-                      onClick={() => setShowAddDomain(true)}
+                      onClick={() => navigate('/app/settings?tab=domains')}
                     >
-                      <Plus className="h-4 w-4" />
-                      Adicionar meu domínio
+                      <Settings className="h-4 w-4" />
+                      Gerenciar meus domínios
                     </button>
                   </div>
                 </SelectContent>
@@ -400,62 +359,6 @@ export const TrackingCreator = ({ onTrackingCreated }: TrackingCreatorProps) => 
           </div>
         )}
       </CardContent>
-
-      {/* Add Domain Dialog */}
-      <Dialog open={showAddDomain} onOpenChange={setShowAddDomain}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Settings className="h-5 w-5" />
-              Adicionar Domínio Próprio
-            </DialogTitle>
-            <DialogDescription>
-              Use seu próprio domínio para receber emails de rastreamento.
-              Você precisará configurar o DNS após adicionar.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="new-domain">Domínio</Label>
-              <Input
-                id="new-domain"
-                placeholder="meudominio.com.br"
-                value={newDomain}
-                onChange={(e) => setNewDomain(e.target.value)}
-              />
-            </div>
-
-            <div className="p-3 bg-muted rounded-lg text-sm">
-              <p className="font-medium mb-2">Após adicionar, você precisará:</p>
-              <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
-                <li>Configurar registros MX no DNS</li>
-                <li>Verificar a propriedade do domínio</li>
-                <li>Aguardar propagação (até 48h)</li>
-              </ol>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddDomain(false)}>
-              Cancelar
-            </Button>
-            <Button
-              onClick={() => addDomainMutation.mutate()}
-              disabled={!newDomain.trim() || addDomainMutation.isPending}
-            >
-              {addDomainMutation.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Adicionando...
-                </>
-              ) : (
-                'Adicionar Domínio'
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </Card>
   );
 };
