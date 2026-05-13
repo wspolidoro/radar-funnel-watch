@@ -300,15 +300,15 @@ export const TrackingCreator = ({ onTrackingCreated }: TrackingCreatorProps) => 
                     </div>
                   )}
 
-                  {/* Add custom domain option */}
+                  {/* Manage domains link */}
                   <div className="border-t mt-2 pt-2">
                     <button
                       type="button"
                       className="w-full px-2 py-2 text-left text-sm hover:bg-muted rounded-md flex items-center gap-2 text-primary"
-                      onClick={() => setShowAddDomain(true)}
+                      onClick={() => navigate('/app/settings?tab=domains')}
                     >
-                      <Plus className="h-4 w-4" />
-                      Adicionar meu domínio
+                      <Settings className="h-4 w-4" />
+                      Gerenciar meus domínios
                     </button>
                   </div>
                 </SelectContent>
