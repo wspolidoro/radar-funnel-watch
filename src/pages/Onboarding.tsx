@@ -426,8 +426,69 @@ const Onboarding = () => {
                         >
                           <Copy className="h-3 w-3" />
                         </Button>
-                      </div>
                     </div>
+
+                    {foundMx.length > 0 && (
+                      <div className="mt-4 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <h5 className="text-[10px] font-bold uppercase text-muted-foreground flex items-center gap-1">
+                            <Server className="h-3 w-3" />
+                            Registros Encontrados no DNS
+                          </h5>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={verifyDns} 
+                            disabled={isVerifying}
+                            className="h-6 text-[10px] gap-1"
+                          >
+                            <RefreshCw className={`h-3 w-3 ${isVerifying ? 'animate-spin' : ''}`} />
+                            Atualizar
+                          </Button>
+                        </div>
+                        <div className="space-y-1.5">
+                          {foundMx.map((record, idx) => {
+                            const isCorrect = record.exchange.toLowerCase() === 'mx.maileroo.com';
+                            return (
+                              <div key={idx} className="flex items-center justify-between p-2 bg-background/50 border border-border/50 rounded-lg text-[10px]">
+                                <div className="flex flex-col">
+                                  <span className="font-mono">{record.exchange}</span>
+                                  <span className="text-muted-foreground">Prioridade: {record.preference}</span>
+                                </div>
+                                <Badge variant={isCorrect ? "success" : "destructive"} className="text-[9px] px-1.5 py-0">
+                                  {isCorrect ? 'Correto' : 'Divergente'}
+                                </Badge>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {foundMx.length === 0 && dnsStatus === 'incorrect' && (
+                      <div className="mt-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-[10px] font-bold text-destructive uppercase flex items-center gap-1">
+                            <AlertCircle className="h-3 w-3" />
+                            Status: Pendente
+                          </p>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={verifyDns} 
+                            disabled={isVerifying}
+                            className="h-6 text-[10px] gap-1 text-destructive hover:bg-destructive/10"
+                          >
+                            <RefreshCw className={`h-3 w-3 ${isVerifying ? 'animate-spin' : ''}`} />
+                            Tentar Novamente
+                          </Button>
+                        </div>
+                        <p className="text-[10px] text-destructive/80 leading-relaxed">
+                          Nenhum registro MX foi detectado para o domínio {customDomain}. Isso é comum nos primeiros minutos após a configuração.
+                        </p>
+                      </div>
+                    )}
+                  </div>
                   </div>
 
                   <div className="space-y-3">
