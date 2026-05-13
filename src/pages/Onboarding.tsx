@@ -616,15 +616,28 @@ const Onboarding = () => {
             )}
             
             {step < 3 && (
-              <Button 
-                onClick={handleNext}
-                size="lg"
-                disabled={!isStepValid() || loading || (step === 2 && dnsStatus !== 'verified')}
-                className="px-8 ml-auto group"
-              >
-                {loading ? 'Processando...' : step === 2 ? 'Concluir Configuração' : 'Próximo Passo'}
-                {!loading && <ArrowRight className="h-4 w-4 ml-2 transition-transform group-hover:translate-x-1" />}
-              </Button>
+              <div className="flex gap-2 ml-auto">
+                {step === 2 && dnsStatus !== 'verified' && (
+                  <Button 
+                    variant="outline"
+                    onClick={verifyDns}
+                    disabled={isVerifying || !customDomain.includes('.')}
+                    className="border-primary/20 text-primary hover:bg-primary/5"
+                  >
+                    {isVerifying ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : <ShieldCheck className="h-4 w-4 mr-2" />}
+                    Testar Configuração
+                  </Button>
+                )}
+                <Button 
+                  onClick={handleNext}
+                  size="lg"
+                  disabled={!isStepValid() || loading || (step === 2 && dnsStatus !== 'verified')}
+                  className="px-8 group"
+                >
+                  {loading ? 'Processando...' : step === 2 ? 'Concluir Configuração' : 'Próximo Passo'}
+                  {!loading && <ArrowRight className="h-4 w-4 ml-2 transition-transform group-hover:translate-x-1" />}
+                </Button>
+              </div>
             )}
             
             {step === 3 && setupStep === 'complete' && (
