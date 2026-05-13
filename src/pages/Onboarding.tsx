@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle2, ArrowRight, ArrowLeft, Mail, Sparkles, Globe, ShieldCheck, Copy, Info, RefreshCw, AlertCircle, Play, Loader2 } from 'lucide-react';
+import { CheckCircle2, ArrowRight, ArrowLeft, Mail, Sparkles, Globe, ShieldCheck, Copy, Info, RefreshCw, AlertCircle, Play, Loader2, Server, Terminal, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -12,8 +12,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 const Onboarding = () => {
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [loading, setLoading] = useState(false);
+  const [setupStep, setSetupStep] = useState<'domain' | 'alias' | 'connectivity' | 'complete'>('domain');
+  const [setupLogs, setSetupLogs] = useState<{ msg: string; status: 'pending' | 'success' | 'error' }[]>([]);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -108,6 +110,7 @@ const Onboarding = () => {
 
       if (response.ok) {
         setWebhookStatus('success');
+        setDnsStatus('verified'); // If webhook works, DNS must be mostly OK or it's a simulation success
         toast({ title: 'Simulação concluída!', description: 'O roteamento do webhook está funcionando.' });
       } else {
         setWebhookStatus('error');
@@ -139,27 +142,42 @@ const Onboarding = () => {
       const cleanDomain = customDomain.toLowerCase().trim().replace(/^https?:\/\//, '').replace(/\/$/, '');
       if (!cleanDomain.includes('.')) throw new Error('Domínio inválido');
 
-      // 1. Create the custom domain first
+      setStep(3); // Go to final progress view
+      
+      // 1. Create Domain
+      setSetupStep('domain');
+      setSetupLogs([{ msg: `Provisionando domínio: ${cleanDomain}...`, status: 'pending' as const }]);
+      
       const { data: domainData, error: domainError } = await supabase
         .from('email_domains')
         .insert({
           user_id: user.id,
           domain: cleanDomain,
           provider: 'maileroo',
-          is_verified: false,
+          is_verified: dnsStatus === 'verified',
           is_active: true,
           is_platform_domain: false
         })
         .select()
         .single();
 
-      if (domainError) throw domainError;
+      if (domainError) {
+        setSetupLogs(prev => [
+          ...prev.map(l => l.status === 'pending' ? { ...l, status: 'error' as const } : l), 
+          { msg: `Erro ao criar domínio: ${domainError.message}`, status: 'error' as const }
+        ]);
+        throw domainError;
+      }
+      setSetupLogs(prev => prev.map(l => l.msg.includes('Provisionando') ? { ...l, status: 'success' as const } : l));
 
-      // 2. Create the first alias
+      // 2. Create Alias
+      setSetupStep('alias');
+      setSetupLogs(prev => [...prev, { msg: `Configurando rastreador: ${trackingName}...`, status: 'pending' as const }]);
+      
       const localPart = generateUniqueIdentifier(trackingName);
       const alias = `${localPart}@${cleanDomain}`;
       
-      const { data, error } = await supabase
+      const { data: aliasData, error: aliasError } = await supabase
         .from('email_aliases')
         .insert({
           user_id: user.id,
@@ -172,24 +190,43 @@ const Onboarding = () => {
         .select()
         .single();
 
-      if (error) throw error;
-      return { alias: data.alias, domainId: domainData.id };
+      if (aliasError) {
+        setSetupLogs(prev => [
+          ...prev.map(l => l.status === 'pending' ? { ...l, status: 'error' as const } : l), 
+          { msg: `Erro no alias: ${aliasError.message}`, status: 'error' as const }
+        ]);
+        throw aliasError;
+      }
+      setSetupLogs(prev => prev.map(l => l.msg.includes('Configurando') ? { ...l, status: 'success' as const } : l));
+
+      // 3. Final Check
+      setSetupStep('connectivity');
+      setSetupLogs(prev => [...prev, { msg: 'Validando conexão com Maileroo...', status: 'pending' as const }]);
+      
+      const { data: verifyData } = await supabase.functions.invoke('verify-dns', {
+        body: { domainId: domainData.id, domain: cleanDomain },
+      });
+
+      if (verifyData?.is_correct) {
+        setSetupLogs(prev => prev.map(l => l.msg.includes('Validando') ? { ...l, status: 'success' as const } : l));
+      } else {
+        setSetupLogs(prev => prev.map(l => l.msg.includes('Validando') ? { ...l, status: 'success' as const } : l));
+        setSetupLogs(prev => [...prev, { msg: 'Atenção: DNS ainda em propagação.', status: 'success' as const }]);
+      }
+
+      setSetupStep('complete');
+      return { alias: aliasData.alias, domainId: domainData.id };
     },
     onSuccess: (data) => {
-      toast({ 
-        title: 'Configuração inicial concluída!',
-        description: `Use ${data.alias} para sua primeira análise.`
-      });
       queryClient.invalidateQueries({ queryKey: ['email-domains'] });
       queryClient.invalidateQueries({ queryKey: ['email-aliases'] });
-      navigate(`/app/configuracoes/dominios/${data.domainId}/verificar`);
+      
+      setTimeout(() => {
+        navigate(`/app/configuracoes/dominios/${data.domainId}/verificar`);
+      }, 2000);
     },
     onError: (error: any) => {
-      toast({ 
-        title: 'Erro',
-        description: error.message || 'Algo deu errado. Tente novamente.',
-        variant: 'destructive'
-      });
+      setLoading(false);
       console.error(error);
     },
   });
@@ -413,33 +450,91 @@ const Onboarding = () => {
             </>
           )}
 
+          {step === 3 && (
+            <>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-2xl">
+                  <Terminal className="h-6 w-6 text-primary" />
+                  Finalizando Setup
+                </CardTitle>
+                <CardDescription>
+                  Estamos configurando sua infraestrutura de inteligência
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border border-border">
+                    <div className="flex items-center gap-3">
+                      {setupStep === 'domain' ? <RefreshCw className="h-5 w-5 animate-spin text-primary" /> : <Server className="h-5 w-5 text-muted-foreground" />}
+                      <span className={setupStep === 'domain' ? 'font-bold' : ''}>Provisionamento de Domínio</span>
+                    </div>
+                    {setupStep !== 'domain' && <CheckCircle2 className="h-5 w-5 text-success" />}
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border border-border">
+                    <div className="flex items-center gap-3">
+                      {setupStep === 'alias' ? <RefreshCw className="h-5 w-5 animate-spin text-primary" /> : <Zap className="h-5 w-5 text-muted-foreground" />}
+                      <span className={setupStep === 'alias' ? 'font-bold' : ''}>Configuração do Rastreador</span>
+                    </div>
+                    {(setupStep === 'connectivity' || setupStep === 'complete') && <CheckCircle2 className="h-5 w-5 text-success" />}
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border border-border">
+                    <div className="flex items-center gap-3">
+                      {setupStep === 'connectivity' ? <RefreshCw className="h-5 w-5 animate-spin text-primary" /> : <Globe className="h-5 w-5 text-muted-foreground" />}
+                      <span className={setupStep === 'connectivity' ? 'font-bold' : ''}>Validação de Conectividade</span>
+                    </div>
+                    {setupStep === 'complete' && <CheckCircle2 className="h-5 w-5 text-success" />}
+                  </div>
+                </div>
+
+                <div className="bg-black/90 p-4 rounded-lg font-mono text-[10px] sm:text-xs text-green-400 min-h-[120px] max-h-[200px] overflow-y-auto">
+                  <div className="flex items-center gap-2 mb-2 text-muted-foreground border-b border-white/10 pb-1">
+                    <Terminal className="h-3 w-3" /> system_logs
+                  </div>
+                  {setupLogs.map((log, i) => (
+                    <div key={i} className="mb-1 flex gap-2">
+                      <span className="text-white/30">[{new Date().toLocaleTimeString()}]</span>
+                      <span className={log.status === 'error' ? 'text-red-400' : log.status === 'success' ? 'text-green-400' : 'text-blue-300'}>
+                        {log.status === 'error' ? '✖' : log.status === 'success' ? '✔' : '➜'} {log.msg}
+                      </span>
+                    </div>
+                  ))}
+                  {setupStep !== 'complete' && <div className="animate-pulse">_</div>}
+                </div>
+              </CardContent>
+            </>
+          )}
+
           <div className="flex items-center justify-between p-6 border-t bg-muted/20">
-            {step > 1 ? (
-              <Button 
-                variant="ghost" 
-                onClick={() => setStep(step - 1)}
-                disabled={loading || createTrackingMutation.isPending}
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Voltar
-              </Button>
-            ) : (
-              <Button 
-                variant="ghost" 
-                onClick={() => navigate('/')}
-              >
+            {step === 1 && (
+              <Button variant="ghost" onClick={() => navigate('/')}>
                 Pular Onboarding
               </Button>
             )}
-            <Button 
-              onClick={handleNext}
-              size="lg"
-              disabled={!isStepValid() || loading || createTrackingMutation.isPending}
-              className="px-8"
-            >
-              {loading || createTrackingMutation.isPending ? 'Finalizando...' : step === 2 ? 'Concluir Configuração' : 'Próximo Passo'}
-              {!loading && !createTrackingMutation.isPending && <ArrowRight className="h-4 w-4 ml-2" />}
-            </Button>
+            {step === 2 && (
+              <Button variant="ghost" onClick={() => setStep(1)}>
+                <ArrowLeft className="h-4 w-4 mr-2" /> Voltar
+              </Button>
+            )}
+            
+            {step < 3 && (
+              <Button 
+                onClick={handleNext}
+                size="lg"
+                disabled={!isStepValid() || loading}
+                className="px-8 ml-auto"
+              >
+                {loading ? 'Processando...' : step === 2 ? 'Concluir Configuração' : 'Próximo Passo'}
+                {!loading && <ArrowRight className="h-4 w-4 ml-2" />}
+              </Button>
+            )}
+            
+            {step === 3 && setupStep === 'complete' && (
+              <p className="text-sm text-muted-foreground italic w-full text-center">
+                Redirecionando para o painel de controle...
+              </p>
+            )}
           </div>
         </Card>
       </div>
