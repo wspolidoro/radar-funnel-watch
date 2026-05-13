@@ -58,6 +58,7 @@ interface FunnelBuilderProps {
   selectedEmailIds: string[];
   onEmailsChange: (emailIds: string[]) => void;
   funnelColor?: string;
+  initialAliasId?: string | null;
 }
 
 // Droppable container for the timeline
