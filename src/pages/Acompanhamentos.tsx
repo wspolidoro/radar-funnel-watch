@@ -167,10 +167,24 @@ export default function Acompanhamentos() {
                   <Badge variant={acompanhamento.is_confirmed ? 'default' : 'secondary'}>
                     {acompanhamento.is_confirmed ? 'Ativo' : 'Pendente'}
                   </Badge>
-                  <Button variant="ghost" size="sm" className="gap-1">
-                    Ver detalhes
-                    <ExternalLink className="h-3 w-3" />
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="gap-1 text-primary hover:text-primary hover:bg-primary/5"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/app/funis?alias=${acompanhamento.id}`);
+                      }}
+                    >
+                      <GitBranch className="h-3 w-3" />
+                      Fluxograma
+                    </Button>
+                    <Button variant="ghost" size="sm" className="gap-1">
+                      Ver detalhes
+                      <ExternalLink className="h-3 w-3" />
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
