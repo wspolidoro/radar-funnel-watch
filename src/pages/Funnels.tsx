@@ -520,11 +520,12 @@ const Funnels = () => {
 
                   {/* Funnel Builder */}
                   <div className="border-t pt-4">
-                    <FunnelBuilder
-                      selectedEmailIds={newFunnelEmailIds}
-                      onEmailsChange={setNewFunnelEmailIds}
-                      funnelColor={newFunnelColor}
-                    />
+                  <FunnelBuilder
+                    selectedEmailIds={newFunnelEmailIds}
+                    onEmailsChange={setNewFunnelEmailIds}
+                    funnelColor={newFunnelColor}
+                    initialAliasId={aliasId}
+                  />
                   </div>
                 </div>
               </div>
