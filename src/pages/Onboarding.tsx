@@ -468,7 +468,7 @@ const Onboarding = () => {
                       </div>
                     )}
 
-                    {foundMx.length === 0 && dnsStatus === 'incorrect' && (
+                    {foundMx.length === 0 && (dnsStatus === 'incorrect' || dnsStatus === 'no_records') && (
                       <div className="mt-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
                         <div className="flex items-center justify-between mb-2">
                           <p className="text-[10px] font-bold text-destructive uppercase flex items-center gap-1">
