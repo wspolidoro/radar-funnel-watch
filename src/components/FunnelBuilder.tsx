@@ -106,6 +106,7 @@ export const FunnelBuilder: React.FC<FunnelBuilderProps> = ({
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [activeId, setActiveId] = useState<string | null>(null);
   const [previewEmail, setPreviewEmail] = useState<FunnelEmailCardData | null>(null);
+  const [viewMode, setViewMode] = useState<'timeline' | 'grid'>('timeline');
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
