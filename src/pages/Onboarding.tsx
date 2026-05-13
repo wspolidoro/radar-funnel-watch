@@ -56,6 +56,9 @@ const Onboarding = () => {
 
       if (error) throw error;
 
+      const records = data.found_mx || [];
+      setFoundMx(records);
+
       if (data.is_correct) {
         setDnsStatus('verified');
         toast({ title: 'DNS Verificado!', description: 'Seus registros MX estão corretos.' });
