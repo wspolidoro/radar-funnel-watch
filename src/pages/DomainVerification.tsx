@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { 
   CheckCircle, 
@@ -18,8 +19,11 @@ import {
   Mail, 
   Info,
   Clock,
-  ChevronRight
+  ChevronRight,
+  Activity,
+  Settings as SettingsIcon
 } from 'lucide-react';
+import { RoutingLogs } from '@/components/RoutingLogs';
 
 export default function DomainVerification() {
   const { id } = useParams<{ id: string }>();
