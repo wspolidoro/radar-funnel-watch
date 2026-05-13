@@ -29,6 +29,7 @@ import CapturedNewsletters from "./pages/CapturedNewsletters";
 import Analytics from "./pages/Analytics";
 import ClientAlerts from "./pages/app/ClientAlerts";
 import Acompanhamentos from "./pages/Acompanhamentos";
+import DomainVerification from "./pages/DomainVerification";
 
 // Admin SaaS Pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
