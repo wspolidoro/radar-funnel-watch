@@ -471,12 +471,24 @@ export const FunnelBuilder: React.FC<FunnelBuilderProps> = ({
               Timeline do Funil
               <Badge variant="secondary">{selectedEmailIds.length}</Badge>
             </h3>
-            {selectedEmailIds.length > 0 && (
-              <Button variant="ghost" size="sm" onClick={clearTimeline}>
-                <Trash2 className="h-4 w-4 mr-1" />
-                Limpar
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={suggestSequence}
+                className="gap-1.5 text-primary border-primary/20 hover:bg-primary/5"
+                title="Sugerir sequência baseada no remetente com mais emails"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                Sugerir Funil
               </Button>
-            )}
+              {selectedEmailIds.length > 0 && (
+                <Button variant="ghost" size="sm" onClick={clearTimeline}>
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Limpar
+                </Button>
+              )}
+            </div>
           </div>
 
           {/* Timeline Stats */}
