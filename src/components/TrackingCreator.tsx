@@ -30,6 +30,7 @@ export const TrackingCreator = ({ onTrackingCreated }: TrackingCreatorProps) => 
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   
   const [name, setName] = useState('');
   const [selectedDomain, setSelectedDomain] = useState<string>('');
