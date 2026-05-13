@@ -31,6 +31,46 @@ const Onboarding = () => {
     toast({ title: 'Copiado!' });
   };
 
+  const verifyDns = async () => {
+    if (!customDomain.trim() || !customDomain.includes('.')) {
+      toast({ 
+        title: 'Domínio inválido',
+        description: 'Informe um domínio antes de verificar.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setIsVerifying(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('verify-dns', {
+        body: { domain: customDomain.toLowerCase().trim() },
+      });
+
+      if (error) throw error;
+
+      if (data.is_correct) {
+        setDnsStatus('verified');
+        toast({ title: 'DNS Verificado!', description: 'Seus registros MX estão corretos.' });
+      } else {
+        setDnsStatus(data.status || 'incorrect');
+        toast({ 
+          title: 'DNS Incorreto', 
+          description: data.error || 'Aguarde a propagação ou verifique os registros.',
+          variant: 'destructive'
+        });
+      }
+    } catch (e: any) {
+      toast({ 
+        title: 'Erro na verificação', 
+        description: e.message,
+        variant: 'destructive'
+      });
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
   // Generate unique identifier
   const generateUniqueIdentifier = (baseName: string): string => {
     const cleanName = baseName
