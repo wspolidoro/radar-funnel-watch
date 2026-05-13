@@ -260,9 +260,14 @@ const Onboarding = () => {
           {step === 2 && (
             <>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-2xl">
-                  <Globe className="h-6 w-6 text-primary" />
-                  Conexão via Maileroo
+                <CardTitle className="flex items-center justify-between text-2xl">
+                  <div className="flex items-center gap-2">
+                    <Globe className="h-6 w-6 text-primary" />
+                    Conexão via Maileroo
+                  </div>
+                  {dnsStatus === 'verified' && (
+                    <Badge className="bg-success text-white">DNS OK</Badge>
+                  )}
                 </CardTitle>
                 <CardDescription>
                   Configure seu domínio de destino para capturar os emails
@@ -271,13 +276,32 @@ const Onboarding = () => {
               <CardContent className="space-y-6">
                 <div className="space-y-2">
                   <Label htmlFor="domain">Seu Domínio ou Subdomínio</Label>
-                  <Input
-                    id="domain"
-                    placeholder="emails.seudominio.com"
-                    value={customDomain}
-                    onChange={(e) => setCustomDomain(e.target.value)}
-                    className="text-lg py-6"
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      id="domain"
+                      placeholder="emails.seudominio.com"
+                      value={customDomain}
+                      onChange={(e) => {
+                        setCustomDomain(e.target.value);
+                        setDnsStatus('pending');
+                      }}
+                      className="text-lg py-6"
+                    />
+                    <Button 
+                      variant="outline" 
+                      onClick={verifyDns}
+                      disabled={isVerifying || !customDomain.includes('.')}
+                      className="h-auto"
+                    >
+                      {isVerifying ? <RefreshCw className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
+                      <span className="hidden sm:ml-2 sm:inline">Verificar DNS</span>
+                    </Button>
+                  </div>
+                  {dnsStatus === 'incorrect' && (
+                    <p className="text-xs text-destructive flex items-center gap-1 mt-1">
+                      <AlertCircle className="h-3 w-3" /> Registros MX ainda não detectados. Verifique no painel do Maileroo.
+                    </p>
+                  )}
                   <p className="text-xs text-muted-foreground">
                     Recomendamos usar um subdomínio como <span className="font-mono">radar.seu-site.com</span>
                   </p>
@@ -285,10 +309,13 @@ const Onboarding = () => {
 
                 <div className="bg-primary/5 p-4 rounded-xl border border-primary/20 space-y-4">
                   <div className="space-y-2">
-                    <h4 className="font-bold text-sm flex items-center gap-2">
-                      <ShieldCheck className="h-4 w-4 text-primary" />
-                      Passo 1: Apontamento DNS (MX)
-                    </h4>
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-bold text-sm flex items-center gap-2">
+                        <ShieldCheck className="h-4 w-4 text-primary" />
+                        Passo 1: Apontamento DNS (MX)
+                      </h4>
+                      {dnsStatus === 'verified' && <CheckCircle2 className="h-4 w-4 text-success" />}
+                    </div>
                     <p className="text-xs text-muted-foreground">
                       No seu gerenciador de domínio (Cloudflare, etc), crie este registro:
                     </p>
@@ -307,9 +334,9 @@ const Onboarding = () => {
                     <p className="text-xs text-muted-foreground">
                       No painel do Maileroo, encaminhe os emails para:
                     </p>
-                    <div className="flex items-center gap-2 p-2 bg-background border rounded font-mono text-xs">
+                    <div className="flex items-center gap-2 p-2 bg-background border rounded font-mono text-xs overflow-hidden">
                       <span className="truncate flex-1">{webhookUrl}</span>
-                      <Button variant="ghost" size="icon" onClick={() => copyToClipboard(webhookUrl)} className="h-6 w-6">
+                      <Button variant="ghost" size="icon" onClick={() => copyToClipboard(webhookUrl)} className="h-6 w-6 shrink-0">
                         <Copy className="w-3 h-3" />
                       </Button>
                     </div>
