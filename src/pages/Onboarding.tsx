@@ -30,6 +30,7 @@ const Onboarding = () => {
   const [isVerifying, setIsVerifying] = useState(false);
   const [isSimulating, setIsSimulating] = useState(false);
   const [webhookStatus, setWebhookStatus] = useState<'pending' | 'success' | 'error'>('pending');
+  const [foundMx, setFoundMx] = useState<{ preference: number; exchange: string }[]>([]);
   const webhookUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/receive-email`;
 
   const copyToClipboard = (text: string) => {
