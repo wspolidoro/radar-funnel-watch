@@ -597,6 +597,66 @@ export const FunnelBuilder: React.FC<FunnelBuilderProps> = ({
               </SheetHeader>
 
               <div className="mt-6 space-y-4">
+                {/* AI Analysis Summary */}
+                {(previewEmail.email_type || previewEmail.sentiment || previewEmail.target_audience) && (
+                  <Card className="border-primary/20 bg-primary/5">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-medium flex items-center gap-2">
+                        <Sparkles className="h-4 w-4 text-primary" />
+                        Análise Estratégica IA
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="flex gap-4">
+                        {previewEmail.email_type && (
+                          <div className="flex-1">
+                            <span className="text-xs text-muted-foreground block mb-1">Tipo de Email</span>
+                            <Badge variant="outline" className="capitalize">{previewEmail.email_type}</Badge>
+                          </div>
+                        )}
+                        {previewEmail.sentiment && (
+                          <div className="flex-1">
+                            <span className="text-xs text-muted-foreground block mb-1">Sentimento</span>
+                            <Badge variant="outline" className="capitalize">{previewEmail.sentiment}</Badge>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {previewEmail.target_audience && (
+                        <div>
+                          <span className="text-xs text-muted-foreground block mb-1">Público-Alvo</span>
+                          <p className="text-sm">{previewEmail.target_audience}</p>
+                        </div>
+                      )}
+
+                      {previewEmail.main_topics && previewEmail.main_topics.length > 0 && (
+                        <div>
+                          <span className="text-xs text-muted-foreground block mb-1">Tópicos Principais</span>
+                          <div className="flex flex-wrap gap-1">
+                            {previewEmail.main_topics.map((topic, i) => (
+                              <Badge key={i} variant="secondary" className="text-[10px]">{topic}</Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {previewEmail.marketing_insights && (
+                        <div>
+                          <span className="text-xs text-muted-foreground block mb-1">Insights de Marketing</span>
+                          <ul className="text-sm space-y-1 list-disc list-inside">
+                            {Array.isArray(previewEmail.marketing_insights) ? 
+                              previewEmail.marketing_insights.map((insight, i) => (
+                                <li key={i}>{insight}</li>
+                              )) : 
+                              <li>{String(previewEmail.marketing_insights)}</li>
+                            }
+                          </ul>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
                 {/* Metadata */}
                 <Card>
                   <CardHeader className="pb-3">
