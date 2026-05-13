@@ -92,7 +92,7 @@ const Onboarding = () => {
       });
       queryClient.invalidateQueries({ queryKey: ['email-domains'] });
       queryClient.invalidateQueries({ queryKey: ['email-aliases'] });
-      navigate('/app/settings?tab=domains');
+      navigate(`/app/configuracoes/dominios/${data.domain_id || data.id}/verificar`);
     },
     onError: (error: any) => {
       toast({ 
