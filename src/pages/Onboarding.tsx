@@ -145,7 +145,7 @@ const Onboarding = () => {
       
       // 1. Create Domain
       setSetupStep('domain');
-      setSetupLogs([{ msg: `Provisionando domínio: ${cleanDomain}...`, status: 'pending' }]);
+      setSetupLogs([{ msg: `Provisionando domínio: ${cleanDomain}...`, status: 'pending' as const }]);
       
       const { data: domainData, error: domainError } = await supabase
         .from('email_domains')
