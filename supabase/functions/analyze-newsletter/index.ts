@@ -114,6 +114,10 @@ Responda APENAS com o JSON, sem markdown ou explicações.`
         email_type: analysis.email_type,
         sentiment: analysis.sentiment,
         category: analysis.category,
+        main_topics: analysis.main_topics,
+        marketing_insights: analysis.marketing_insights,
+        target_audience: analysis.target_audience,
+        cta_analysis: analysis.cta_analysis,
         analyzed_at: new Date().toISOString(),
       })
       .eq('id', newsletterId);
