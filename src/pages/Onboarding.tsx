@@ -455,7 +455,10 @@ const Onboarding = () => {
                                   <span className="font-mono">{record.exchange}</span>
                                   <span className="text-muted-foreground">Prioridade: {record.preference}</span>
                                 </div>
-                                <Badge variant={isCorrect ? "success" : "destructive"} className="text-[9px] px-1.5 py-0">
+                                <Badge 
+                                  variant="outline" 
+                                  className={`text-[9px] px-1.5 py-0 ${isCorrect ? 'bg-success/10 text-success border-success/20' : 'bg-destructive/10 text-destructive border-destructive/20'}`}
+                                >
                                   {isCorrect ? 'Correto' : 'Divergente'}
                                 </Badge>
                               </div>
