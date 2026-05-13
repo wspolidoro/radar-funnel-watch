@@ -393,7 +393,7 @@ const Onboarding = () => {
                 </div>
 
                 <div className="bg-primary/5 p-4 rounded-xl border border-primary/20 space-y-4">
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <h4 className="font-bold text-sm flex items-center gap-2">
                         <ShieldCheck className="h-4 w-4 text-primary" />
@@ -401,13 +401,28 @@ const Onboarding = () => {
                       </h4>
                       {dnsStatus === 'verified' && <CheckCircle2 className="h-4 w-4 text-success" />}
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      No seu gerenciador de domínio (Cloudflare, etc), crie este registro:
+                    <p className="text-[11px] text-muted-foreground">
+                      No seu gerenciador de domínio (Cloudflare, etc), crie este registro exatamente como abaixo:
                     </p>
-                    <div className="flex items-center gap-2 p-2 bg-background border rounded font-mono text-xs">
-                      <Badge variant="outline">MX</Badge>
-                      <span className="flex-1 text-primary">mx.maileroo.com</span>
-                      <Badge variant="outline">Prioridade: 10</Badge>
+                    <div className="grid grid-cols-1 gap-2">
+                      <div className="flex items-center gap-2 p-2 bg-background border rounded font-mono text-[10px] relative group overflow-hidden">
+                        <div className="flex flex-col flex-1 truncate">
+                          <span className="text-[9px] uppercase text-muted-foreground">Tipo/Prioridade</span>
+                          <span className="font-bold">MX (10)</span>
+                        </div>
+                        <div className="flex flex-col flex-[2] truncate">
+                          <span className="text-[9px] uppercase text-muted-foreground">Valor (Servidor)</span>
+                          <span className="font-bold text-primary">mx.maileroo.com</span>
+                        </div>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => copyToClipboard('mx.maileroo.com')} 
+                          className="h-8 w-8 shrink-0 hover:bg-primary/10"
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
 
