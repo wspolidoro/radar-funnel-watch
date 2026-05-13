@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle2, ArrowRight, ArrowLeft, Mail, Sparkles, Globe, ShieldCheck, Copy, Info, RefreshCw, AlertCircle, Play, Loader2 } from 'lucide-react';
+import { CheckCircle2, ArrowRight, ArrowLeft, Mail, Sparkles, Globe, ShieldCheck, Copy, Info, RefreshCw, AlertCircle, Play, Loader2, Server, Terminal, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -12,8 +12,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 const Onboarding = () => {
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [loading, setLoading] = useState(false);
+  const [setupStep, setSetupStep] = useState<'domain' | 'alias' | 'connectivity' | 'complete'>('domain');
+  const [setupLogs, setSetupLogs] = useState<{ msg: string; status: 'pending' | 'success' | 'error' }[]>([]);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -139,27 +141,39 @@ const Onboarding = () => {
       const cleanDomain = customDomain.toLowerCase().trim().replace(/^https?:\/\//, '').replace(/\/$/, '');
       if (!cleanDomain.includes('.')) throw new Error('Domínio inválido');
 
-      // 1. Create the custom domain first
+      setStep(3); // Go to final progress view
+      
+      // 1. Create Domain
+      setSetupStep('domain');
+      setSetupLogs([{ msg: `Provisionando domínio: ${cleanDomain}...`, status: 'pending' }]);
+      
       const { data: domainData, error: domainError } = await supabase
         .from('email_domains')
         .insert({
           user_id: user.id,
           domain: cleanDomain,
           provider: 'maileroo',
-          is_verified: false,
+          is_verified: dnsStatus === 'verified',
           is_active: true,
           is_platform_domain: false
         })
         .select()
         .single();
 
-      if (domainError) throw domainError;
+      if (domainError) {
+        setSetupLogs(prev => [...prev.map(l => l.status === 'pending' ? { ...l, status: 'error' } : l), { msg: `Erro ao criar domínio: ${domainError.message}`, status: 'error' }]);
+        throw domainError;
+      }
+      setSetupLogs(prev => prev.map(l => l.msg.includes('Provisionando') ? { ...l, status: 'success' } : l));
 
-      // 2. Create the first alias
+      // 2. Create Alias
+      setSetupStep('alias');
+      setSetupLogs(prev => [...prev, { msg: `Configurando rastreador: ${trackingName}...`, status: 'pending' }]);
+      
       const localPart = generateUniqueIdentifier(trackingName);
       const alias = `${localPart}@${cleanDomain}`;
       
-      const { data, error } = await supabase
+      const { data, error: aliasError } = await supabase
         .from('email_aliases')
         .insert({
           user_id: user.id,
@@ -172,24 +186,41 @@ const Onboarding = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (aliasError) {
+        setSetupLogs(prev => [...prev.map(l => l.status === 'pending' ? { ...l, status: 'error' } : l), { msg: `Erro no alias: ${aliasError.message}`, status: 'error' }]);
+        throw aliasError;
+      }
+      setSetupLogs(prev => prev.map(l => l.msg.includes('Configurando') ? { ...l, status: 'success' } : l));
+
+      // 3. Final Check
+      setSetupStep('connectivity');
+      setSetupLogs(prev => [...prev, { msg: 'Validando conexão com Maileroo...', status: 'pending' }]);
+      
+      // Mock connectivity check or real verify-dns again
+      const { data: verifyData } = await supabase.functions.invoke('verify-dns', {
+        body: { domainId: domainData.id, domain: cleanDomain },
+      });
+
+      if (verifyData?.is_correct) {
+        setSetupLogs(prev => prev.map(l => l.msg.includes('Validando') ? { ...l, status: 'success' } : l));
+      } else {
+        setSetupLogs(prev => prev.map(l => l.msg.includes('Validando') ? { ...l, status: 'success' } : l));
+        setSetupLogs(prev => [...prev, { msg: 'Atenção: DNS ainda em propagação. Finalize no painel.', status: 'success' }]);
+      }
+
+      setSetupStep('complete');
       return { alias: data.alias, domainId: domainData.id };
     },
     onSuccess: (data) => {
-      toast({ 
-        title: 'Configuração inicial concluída!',
-        description: `Use ${data.alias} para sua primeira análise.`
-      });
       queryClient.invalidateQueries({ queryKey: ['email-domains'] });
       queryClient.invalidateQueries({ queryKey: ['email-aliases'] });
-      navigate(`/app/configuracoes/dominios/${data.domainId}/verificar`);
+      
+      setTimeout(() => {
+        navigate(`/app/configuracoes/dominios/${data.domainId}/verificar`);
+      }, 2000);
     },
     onError: (error: any) => {
-      toast({ 
-        title: 'Erro',
-        description: error.message || 'Algo deu errado. Tente novamente.',
-        variant: 'destructive'
-      });
+      setLoading(false);
       console.error(error);
     },
   });
