@@ -15,13 +15,16 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useState } from 'react';
 
 interface RoutingLogsProps {
   domain: string;
 }
 
 export const RoutingLogs = ({ domain }: RoutingLogsProps) => {
-  const { data: logs, isLoading } = useQuery({
+  const [isSimulationPending, setIsSimulationPending] = useState(false);
+
+  const { data: logs, isLoading, refetch } = useQuery({
     queryKey: ['email-routing-logs', domain],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -35,6 +38,46 @@ export const RoutingLogs = ({ domain }: RoutingLogsProps) => {
       return data;
     },
   });
+
+  const simulateWebhook = async () => {
+    setIsSimulationPending(true);
+    const mockPayload = {
+      recipients: [`test-webhook@${domain}`],
+      headers: {
+        From: ["Simulação RadarMail <simulacao@radarmail.com>"],
+        Subject: ["Teste de Roteamento de Webhook"]
+      },
+      body: {
+        html: "<p>Este é um teste manual de webhook para validar o roteamento.</p>",
+        plaintext: "Este é um teste manual de webhook para validar o roteamento."
+      },
+      message_id: `sim-${Date.now()}`,
+      domain: domain
+    };
+
+    try {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/receive-email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY
+        },
+        body: JSON.stringify(mockPayload)
+      });
+
+      if (response.ok) {
+        toast.success("Simulação enviada!", { description: "O log deve aparecer na lista em instantes." });
+        setTimeout(() => refetch(), 1500);
+      } else {
+        const err = await response.text();
+        toast.error("Erro na simulação", { description: err });
+      }
+    } catch (e: any) {
+      toast.error("Falha na requisição", { description: e.message });
+    } finally {
+      setIsSimulationPending(false);
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
