@@ -403,9 +403,9 @@ export const FunnelBuilder: React.FC<FunnelBuilderProps> = ({
                 className="pl-9"
               />
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Select value={senderFilter} onValueChange={setSenderFilter}>
-                <SelectTrigger className="flex-1">
+                <SelectTrigger className="flex-1 min-w-[120px]">
                   <Filter className="h-4 w-4 mr-2" />
                   <SelectValue placeholder="Remetente" />
                 </SelectTrigger>
@@ -416,8 +416,21 @@ export const FunnelBuilder: React.FC<FunnelBuilderProps> = ({
                   ))}
                 </SelectContent>
               </Select>
+
+              <Select value={aliasFilter} onValueChange={setAliasFilter}>
+                <SelectTrigger className="flex-1 min-w-[120px]">
+                  <SelectValue placeholder="Acompanhamento" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos acompanhamentos</SelectItem>
+                  {aliases?.map(a => (
+                    <SelectItem key={a.id} value={a.id}>{a.name || a.alias}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="flex-1">
+                <SelectTrigger className="flex-1 min-w-[120px]">
                   <SelectValue placeholder="Categoria" />
                 </SelectTrigger>
                 <SelectContent>
