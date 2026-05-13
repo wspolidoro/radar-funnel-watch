@@ -29,6 +29,7 @@ import CapturedNewsletters from "./pages/CapturedNewsletters";
 import Analytics from "./pages/Analytics";
 import ClientAlerts from "./pages/app/ClientAlerts";
 import Acompanhamentos from "./pages/Acompanhamentos";
+import DomainVerification from "./pages/DomainVerification";
 
 // Admin SaaS Pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -107,6 +108,7 @@ const App = () => (
               {/* Alertas e Configurações */}
               <Route path="alertas" element={<ClientAlerts />} />
               <Route path="configuracoes" element={<Settings />} />
+              <Route path="configuracoes/dominios/:id/verificar" element={<DomainVerification />} />
 
               {/* Legacy redirects */}
               <Route path="senders" element={<Navigate to="/app/acompanhamentos/remetentes" replace />} />
