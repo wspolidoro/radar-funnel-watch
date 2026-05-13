@@ -298,19 +298,40 @@ export const FunnelBuilder: React.FC<FunnelBuilderProps> = ({
     }
   };
 
+  const suggestSequence = () => {
+    if (!availableEmails.length) return;
+    
+    // Group emails by sender
+    const senderGroups = new Map<string, FunnelEmailCardData[]>();
+    availableEmails.forEach(email => {
+      const group = senderGroups.get(email.from_email) || [];
+      group.push(email);
+      senderGroups.set(email.from_email, group);
+    });
+
+    // Find the sender with the most emails
+    let bestSender = '';
+    let maxEmails = 0;
+    senderGroups.forEach((emails, sender) => {
+      if (emails.length > maxEmails) {
+        maxEmails = emails.length;
+        bestSender = sender;
+      }
+    });
+
+    if (bestSender) {
+      const suggestedEmails = senderGroups.get(bestSender) || [];
+      // Sort by date ascending to create a logical sequence
+      const suggestedIds = suggestedEmails
+        .sort((a, b) => new Date(a.received_at).getTime() - new Date(b.received_at).getTime())
+        .map(e => e.id);
+      
+      onEmailsChange([...selectedEmailIds, ...suggestedIds]);
+    }
+  };
+
   if (isLoading) {
-    return (
-      <div className="grid grid-cols-2 gap-6 min-h-[500px]">
-        <div className="space-y-4">
-          <Skeleton className="h-10 w-full" />
-          <div className="grid grid-cols-2 gap-4">
-            {[...Array(4)].map((_, i) => (
-              <Skeleton key={i} className="h-48" />
-            ))}
-          </div>
-        </div>
-        <Skeleton className="h-full" />
-      </div>
+// ... keep existing code
     );
   }
 
