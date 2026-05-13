@@ -392,33 +392,12 @@ export function DomainManager() {
                       variant="outline"
                       size="sm"
                       className="gap-2"
-                      onClick={() => verifyDnsMutation.mutate({ domainId: d.id, domainName: d.domain })}
-                      disabled={isVerifying === d.id || d.is_verified}
+                      onClick={() => navigate(`/app/configuracoes/dominios/${d.id}/verificar`)}
                     >
-                      {isVerifying === d.id ? (
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <CheckCircle className="w-4 h-4" />
-                      )}
-                      Verificar DNS
+                      <ShieldCheck className="w-4 h-4" />
+                      Configurar & Verificar
                     </Button>
 
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-2 border-primary/20 text-primary hover:bg-primary/5"
-                      onClick={() => testConnectivityMutation.mutate({ domainId: d.id, domainName: d.domain })}
-                      disabled={isTesting === d.id || !d.is_verified}
-                      title={!d.is_verified ? "Verifique o DNS primeiro" : "Testar se emails estão chegando"}
-                    >
-                      {isTesting === d.id ? (
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <RefreshCw className="w-4 h-4" />
-                      )}
-                      Testar Conexão
-                    </Button>
-                    
                     <Button
                       variant="ghost"
                       size="icon"
