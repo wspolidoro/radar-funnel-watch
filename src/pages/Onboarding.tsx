@@ -1,22 +1,15 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle2, ArrowRight, ArrowLeft, Mail, Sparkles } from 'lucide-react';
+import { CheckCircle2, ArrowRight, ArrowLeft, Mail, Sparkles, Globe, ShieldCheck, Copy, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 const Onboarding = () => {
   const [step, setStep] = useState(1);
@@ -29,25 +22,14 @@ const Onboarding = () => {
   // Step 1: Tracking Name
   const [trackingName, setTrackingName] = useState('');
   
-  // Step 2: Domain Selection
-  const [selectedDomain, setSelectedDomain] = useState('');
+  // Step 2: Custom Domain Configuration
+  const [customDomain, setCustomDomain] = useState('');
+  const webhookUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/receive-email`;
 
-  // Fetch available domains
-  const { data: domains } = useQuery({
-    queryKey: ['onboarding-domains'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('email_domains')
-        .select('*')
-        .eq('is_active', true)
-        .eq('is_platform_domain', true)
-        .order('domain');
-      
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!user,
-  });
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast({ title: 'Copiado!' });
+  };
 
   // Generate unique identifier
   const generateUniqueIdentifier = (baseName: string): string => {
@@ -64,8 +46,28 @@ const Onboarding = () => {
     mutationFn: async () => {
       if (!user) throw new Error('Não autenticado');
       
+      const cleanDomain = customDomain.toLowerCase().trim().replace(/^https?:\/\//, '').replace(/\/$/, '');
+      if (!cleanDomain.includes('.')) throw new Error('Domínio inválido');
+
+      // 1. Create the custom domain first
+      const { data: domainData, error: domainError } = await supabase
+        .from('email_domains')
+        .insert({
+          user_id: user.id,
+          domain: cleanDomain,
+          provider: 'maileroo',
+          is_verified: false,
+          is_active: true,
+          is_platform_domain: false
+        })
+        .select()
+        .single();
+
+      if (domainError) throw domainError;
+
+      // 2. Create the first alias
       const localPart = generateUniqueIdentifier(trackingName);
-      const alias = `${localPart}@${selectedDomain}`;
+      const alias = `${localPart}@${cleanDomain}`;
       
       const { data, error } = await supabase
         .from('email_aliases')
@@ -74,7 +76,7 @@ const Onboarding = () => {
           name: trackingName.trim(),
           alias: alias,
           local_part: localPart,
-          domain: selectedDomain,
+          domain: cleanDomain,
           description: `Primeiro rastreamento: ${trackingName}`,
         })
         .select()
@@ -85,16 +87,17 @@ const Onboarding = () => {
     },
     onSuccess: (data) => {
       toast({ 
-        title: 'Email de rastreamento criado!',
-        description: `Use ${data.alias} para se inscrever em newsletters.`
+        title: 'Configuração inicial concluída!',
+        description: `Use ${data.alias} para sua primeira análise.`
       });
+      queryClient.invalidateQueries({ queryKey: ['email-domains'] });
       queryClient.invalidateQueries({ queryKey: ['email-aliases'] });
-      navigate('/senders');
+      navigate('/app/settings?tab=domains');
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({ 
         title: 'Erro',
-        description: 'Algo deu errado. Tente novamente.',
+        description: error.message || 'Algo deu errado. Tente novamente.',
         variant: 'destructive'
       });
       console.error(error);
@@ -102,37 +105,37 @@ const Onboarding = () => {
   });
 
   const handleNext = async () => {
-    setLoading(true);
-    try {
-      if (step === 1) {
-        if (!trackingName.trim()) {
-          toast({ 
-            title: 'Nome obrigatório',
-            description: 'Informe o nome da newsletter ou empresa.',
-            variant: 'destructive'
-          });
-          return;
-        }
-        setStep(2);
-      } else if (step === 2) {
-        if (!selectedDomain) {
-          toast({ 
-            title: 'Domínio obrigatório',
-            description: 'Selecione um domínio para o email.',
-            variant: 'destructive'
-          });
-          return;
-        }
-        await createTrackingMutation.mutateAsync();
+    if (step === 1) {
+      if (!trackingName.trim()) {
+        toast({ 
+          title: 'Nome obrigatório',
+          description: 'Informe o nome da newsletter ou empresa.',
+          variant: 'destructive'
+        });
+        return;
       }
-    } finally {
-      setLoading(false);
+      setStep(2);
+    } else if (step === 2) {
+      if (!customDomain.trim() || !customDomain.includes('.')) {
+        toast({ 
+          title: 'Domínio inválido',
+          description: 'Informe um domínio ou subdomínio válido.',
+          variant: 'destructive'
+        });
+        return;
+      }
+      setLoading(true);
+      try {
+        await createTrackingMutation.mutateAsync();
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
   const isStepValid = () => {
     if (step === 1) return trackingName.trim().length > 0;
-    if (step === 2) return selectedDomain.length > 0;
+    if (step === 2) return customDomain.trim().length > 3 && customDomain.includes('.');
     return false;
   };
 
@@ -158,8 +161,8 @@ const Onboarding = () => {
             ))}
           </div>
           <div className="flex justify-between text-sm text-muted-foreground">
-            <span>Identificar Newsletter</span>
-            <span>Criar Email de Rastreamento</span>
+            <span>Identificar Campanhas</span>
+            <span>Conectar Maileroo</span>
           </div>
         </div>
 
@@ -168,33 +171,45 @@ const Onboarding = () => {
           {step === 1 && (
             <>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-primary" />
-                  Qual newsletter você quer monitorar?
+                <CardTitle className="flex items-center gap-2 text-2xl">
+                  <Sparkles className="h-6 w-6 text-primary" />
+                  Bem-vindo ao RadarMail
                 </CardTitle>
                 <CardDescription>
-                  Informe o nome da empresa ou newsletter que deseja rastrear
+                  Qual newsletter ou empresa você quer monitorar primeiro?
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label htmlFor="name">Nome da Newsletter ou Empresa</Label>
+                  <Label htmlFor="name">Nome da Empresa ou Newsletter</Label>
                   <Input
                     id="name"
-                    placeholder="Ex: Apple, Nubank, Newsletter do João..."
+                    placeholder="Ex: Apple, Nubank, Estratégia do Concorrente..."
                     value={trackingName}
                     onChange={(e) => setTrackingName(e.target.value)}
-                    className="mt-1"
+                    className="mt-2 text-lg py-6"
                   />
                 </div>
 
-                <div className="p-4 bg-muted rounded-lg">
-                  <h4 className="font-medium mb-2">O que acontece depois?</h4>
-                  <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
-                    <li>Vamos criar um email único de rastreamento</li>
-                    <li>Use esse email para se inscrever na newsletter</li>
-                    <li>Todos os emails serão capturados automaticamente</li>
-                  </ol>
+                <div className="p-4 bg-muted/50 rounded-lg space-y-3 border border-border">
+                  <h4 className="font-semibold flex items-center gap-2">
+                    <Info className="h-4 w-4 text-primary" />
+                    Como funciona o rastreamento?
+                  </h4>
+                  <ul className="text-sm text-muted-foreground space-y-2">
+                    <li className="flex items-start gap-2">
+                      <Badge variant="outline" className="mt-0.5 shrink-0">1</Badge>
+                      <span>Vamos criar um email único para esta campanha.</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Badge variant="outline" className="mt-0.5 shrink-0">2</Badge>
+                      <span>Use esse email para se inscrever e capturar as mensagens.</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Badge variant="outline" className="mt-0.5 shrink-0">3</Badge>
+                      <span>Nossa IA analisa cada email, revelando a estratégia e o funil.</span>
+                    </li>
+                  </ul>
                 </div>
               </CardContent>
             </>
@@ -203,50 +218,66 @@ const Onboarding = () => {
           {step === 2 && (
             <>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Mail className="h-5 w-5 text-primary" />
-                  Escolha o domínio do email
+                <CardTitle className="flex items-center gap-2 text-2xl">
+                  <Globe className="h-6 w-6 text-primary" />
+                  Conexão via Maileroo
                 </CardTitle>
                 <CardDescription>
-                  Selecione um domínio gratuito para criar seu email de rastreamento para "{trackingName}"
+                  Configure seu domínio de destino para capturar os emails
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="domain">Domínio Gratuito</Label>
-                  <Select 
-                    value={selectedDomain} 
-                    onValueChange={setSelectedDomain}
-                  >
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="Selecione um domínio" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {domains?.map(domain => (
-                        <SelectItem key={domain.id} value={domain.domain}>
-                          <div className="flex items-center gap-2">
-                            {domain.domain}
-                            <Badge variant="secondary" className="text-xs">Gratuito</Badge>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="domain">Seu Domínio ou Subdomínio</Label>
+                  <Input
+                    id="domain"
+                    placeholder="emails.seudominio.com"
+                    value={customDomain}
+                    onChange={(e) => setCustomDomain(e.target.value)}
+                    className="text-lg py-6"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Recomendamos usar um subdomínio como <span className="font-mono">radar.seu-site.com</span>
+                  </p>
                 </div>
 
-                {selectedDomain && (
-                  <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
-                    <p className="text-sm text-muted-foreground mb-1">Seu email será algo como:</p>
-                    <p className="font-mono text-primary">
-                      {trackingName.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 10)}****@{selectedDomain}
+                <div className="bg-primary/5 p-4 rounded-xl border border-primary/20 space-y-4">
+                  <div className="space-y-2">
+                    <h4 className="font-bold text-sm flex items-center gap-2">
+                      <ShieldCheck className="h-4 w-4 text-primary" />
+                      Passo 1: Apontamento DNS (MX)
+                    </h4>
+                    <p className="text-xs text-muted-foreground">
+                      No seu gerenciador de domínio (Cloudflare, etc), crie este registro:
                     </p>
+                    <div className="flex items-center gap-2 p-2 bg-background border rounded font-mono text-xs">
+                      <Badge variant="outline">MX</Badge>
+                      <span className="flex-1 text-primary">mx.maileroo.com</span>
+                      <Badge variant="outline">Prioridade: 10</Badge>
+                    </div>
                   </div>
-                )}
+
+                  <div className="space-y-2">
+                    <h4 className="font-bold text-sm flex items-center gap-2">
+                      <Mail className="h-4 w-4 text-primary" />
+                      Passo 2: Roteamento Webhook
+                    </h4>
+                    <p className="text-xs text-muted-foreground">
+                      No painel do Maileroo, encaminhe os emails para:
+                    </p>
+                    <div className="flex items-center gap-2 p-2 bg-background border rounded font-mono text-xs">
+                      <span className="truncate flex-1">{webhookUrl}</span>
+                      <Button variant="ghost" size="icon" onClick={() => copyToClipboard(webhookUrl)} className="h-6 w-6">
+                        <Copy className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </>
           )}
 
-          <div className="flex items-center justify-between p-6 border-t">
+          <div className="flex items-center justify-between p-6 border-t bg-muted/20">
             {step > 1 ? (
               <Button 
                 variant="ghost" 
@@ -261,14 +292,16 @@ const Onboarding = () => {
                 variant="ghost" 
                 onClick={() => navigate('/')}
               >
-                Cancelar
+                Pular Onboarding
               </Button>
             )}
             <Button 
               onClick={handleNext}
+              size="lg"
               disabled={!isStepValid() || loading || createTrackingMutation.isPending}
+              className="px-8"
             >
-              {loading || createTrackingMutation.isPending ? 'Processando...' : step === 2 ? 'Criar Rastreamento' : 'Próximo'}
+              {loading || createTrackingMutation.isPending ? 'Finalizando...' : step === 2 ? 'Concluir Configuração' : 'Próximo Passo'}
               {!loading && !createTrackingMutation.isPending && <ArrowRight className="h-4 w-4 ml-2" />}
             </Button>
           </div>
