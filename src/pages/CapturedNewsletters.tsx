@@ -406,6 +406,61 @@ const CapturedNewsletters = () => {
                 <SheetTitle className="text-xl">{selectedNewsletter.subject}</SheetTitle>
               </SheetHeader>
               <div className="mt-6 space-y-6">
+                {/* AI Analysis Section */}
+                {(selectedNewsletter.email_type || selectedNewsletter.sentiment || selectedNewsletter.target_audience) && (
+                  <Card className="border-primary/20 bg-primary/5">
+                    <CardHeader className="py-3 px-4">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm font-medium flex items-center gap-2">
+                          <Sparkles className="h-4 w-4 text-primary" />
+                          Análise Estratégica IA
+                        </CardTitle>
+                        {selectedNewsletter.sentiment && (
+                          <Badge variant="outline" className="text-[10px] capitalize">
+                            Sentimento: {selectedNewsletter.sentiment}
+                          </Badge>
+                        )}
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4 px-4 pb-4">
+                      {selectedNewsletter.target_audience && (
+                        <div>
+                          <span className="text-[10px] text-muted-foreground uppercase font-bold block mb-1">Público-Alvo</span>
+                          <p className="text-xs leading-relaxed">{selectedNewsletter.target_audience}</p>
+                        </div>
+                      )}
+
+                      {selectedNewsletter.main_topics && selectedNewsletter.main_topics.length > 0 && (
+                        <div>
+                          <span className="text-[10px] text-muted-foreground uppercase font-bold block mb-1">Tópicos Principais</span>
+                          <div className="flex flex-wrap gap-1">
+                            {selectedNewsletter.main_topics.map((topic, i) => (
+                              <Badge key={i} variant="secondary" className="text-[9px] px-1.5 py-0">{topic}</Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {selectedNewsletter.marketing_insights && (
+                        <div>
+                          <span className="text-[10px] text-muted-foreground uppercase font-bold block mb-1">Marketing Insights</span>
+                          <div className="text-xs space-y-1 text-muted-foreground">
+                            {Array.isArray(selectedNewsletter.marketing_insights) ? 
+                              selectedNewsletter.marketing_insights.map((insight, i) => (
+                                <p key={i} className="flex gap-2">
+                                  <span className="text-primary">•</span>
+                                  {insight}
+                                </p>
+                              )) : 
+                              <p>{String(selectedNewsletter.marketing_insights)}</p>
+                            }
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
                 {/* Opt-in Confirmation */}
                 {(selectedNewsletter.optin_status === 'needs_confirmation' || selectedNewsletter.confirmation_link) && (
                   <div className="p-4 border rounded-lg bg-muted/50">
