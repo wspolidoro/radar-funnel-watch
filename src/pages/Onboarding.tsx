@@ -161,19 +161,22 @@ const Onboarding = () => {
         .single();
 
       if (domainError) {
-        setSetupLogs(prev => [...prev.map(l => l.status === 'pending' ? { ...l, status: 'error' } : l), { msg: `Erro ao criar domínio: ${domainError.message}`, status: 'error' }]);
+        setSetupLogs(prev => [
+          ...prev.map(l => l.status === 'pending' ? { ...l, status: 'error' as const } : l), 
+          { msg: `Erro ao criar domínio: ${domainError.message}`, status: 'error' as const }
+        ]);
         throw domainError;
       }
-      setSetupLogs(prev => prev.map(l => l.msg.includes('Provisionando') ? { ...l, status: 'success' } : l));
+      setSetupLogs(prev => prev.map(l => l.msg.includes('Provisionando') ? { ...l, status: 'success' as const } : l));
 
       // 2. Create Alias
       setSetupStep('alias');
-      setSetupLogs(prev => [...prev, { msg: `Configurando rastreador: ${trackingName}...`, status: 'pending' }]);
+      setSetupLogs(prev => [...prev, { msg: `Configurando rastreador: ${trackingName}...`, status: 'pending' as const }]);
       
       const localPart = generateUniqueIdentifier(trackingName);
       const alias = `${localPart}@${cleanDomain}`;
       
-      const { data, error: aliasError } = await supabase
+      const { data: aliasData, error: aliasError } = await supabase
         .from('email_aliases')
         .insert({
           user_id: user.id,
@@ -187,29 +190,31 @@ const Onboarding = () => {
         .single();
 
       if (aliasError) {
-        setSetupLogs(prev => [...prev.map(l => l.status === 'pending' ? { ...l, status: 'error' } : l), { msg: `Erro no alias: ${aliasError.message}`, status: 'error' }]);
+        setSetupLogs(prev => [
+          ...prev.map(l => l.status === 'pending' ? { ...l, status: 'error' as const } : l), 
+          { msg: `Erro no alias: ${aliasError.message}`, status: 'error' as const }
+        ]);
         throw aliasError;
       }
-      setSetupLogs(prev => prev.map(l => l.msg.includes('Configurando') ? { ...l, status: 'success' } : l));
+      setSetupLogs(prev => prev.map(l => l.msg.includes('Configurando') ? { ...l, status: 'success' as const } : l));
 
       // 3. Final Check
       setSetupStep('connectivity');
-      setSetupLogs(prev => [...prev, { msg: 'Validando conexão com Maileroo...', status: 'pending' }]);
+      setSetupLogs(prev => [...prev, { msg: 'Validando conexão com Maileroo...', status: 'pending' as const }]);
       
-      // Mock connectivity check or real verify-dns again
       const { data: verifyData } = await supabase.functions.invoke('verify-dns', {
         body: { domainId: domainData.id, domain: cleanDomain },
       });
 
       if (verifyData?.is_correct) {
-        setSetupLogs(prev => prev.map(l => l.msg.includes('Validando') ? { ...l, status: 'success' } : l));
+        setSetupLogs(prev => prev.map(l => l.msg.includes('Validando') ? { ...l, status: 'success' as const } : l));
       } else {
-        setSetupLogs(prev => prev.map(l => l.msg.includes('Validando') ? { ...l, status: 'success' } : l));
-        setSetupLogs(prev => [...prev, { msg: 'Atenção: DNS ainda em propagação. Finalize no painel.', status: 'success' }]);
+        setSetupLogs(prev => prev.map(l => l.msg.includes('Validando') ? { ...l, status: 'success' as const } : l));
+        setSetupLogs(prev => [...prev, { msg: 'Atenção: DNS ainda em propagação.', status: 'success' as const }]);
       }
 
       setSetupStep('complete');
-      return { alias: data.alias, domainId: domainData.id };
+      return { alias: aliasData.alias, domainId: domainData.id };
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['email-domains'] });
