@@ -164,6 +164,18 @@ export const FunnelBuilder: React.FC<FunnelBuilderProps> = ({
     return Array.from(categories);
   }, [allEmails]);
 
+  // Fetch aliases for filter
+  const { data: aliases } = useQuery({
+    queryKey: ['funnel-builder-aliases'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('email_aliases')
+        .select('id, alias, name');
+      if (error) throw error;
+      return data;
+    },
+  });
+
   // Filter available emails (not already selected)
   const availableEmails = useMemo(() => {
     if (!allEmails) return [];
