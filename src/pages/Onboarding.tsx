@@ -452,7 +452,6 @@ const Onboarding = () => {
                         Copiar Bloco Completo
                       </Button>
                     </div>
-                  </div>
 
                     {foundMx.length > 0 && (
                       <div className="mt-4 space-y-2">
