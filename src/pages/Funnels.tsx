@@ -97,6 +97,9 @@ const categoryColors: Record<string, string> = {
 const Funnels = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
+  const aliasId = searchParams.get('alias');
+  
   const [selectedFunnel, setSelectedFunnel] = useState<EmailFunnel | null>(null);
   const [viewingEmail, setViewingEmail] = useState<Email | null>(null);
   const [senderFilter, setSenderFilter] = useState('all');
