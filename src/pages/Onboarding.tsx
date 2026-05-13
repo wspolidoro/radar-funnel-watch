@@ -24,6 +24,8 @@ const Onboarding = () => {
   
   // Step 2: Custom Domain Configuration
   const [customDomain, setCustomDomain] = useState('');
+  const [dnsStatus, setDnsStatus] = useState<'pending' | 'verified' | 'incorrect' | 'no_records'>('pending');
+  const [isVerifying, setIsVerifying] = useState(false);
   const webhookUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/receive-email`;
 
   const copyToClipboard = (text: string) => {
