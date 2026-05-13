@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle2, ArrowRight, ArrowLeft, Mail, Sparkles, Globe, ShieldCheck, Copy, Info, RefreshCw, AlertCircle } from 'lucide-react';
+import { CheckCircle2, ArrowRight, ArrowLeft, Mail, Sparkles, Globe, ShieldCheck, Copy, Info, RefreshCw, AlertCircle, Play, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -26,6 +26,8 @@ const Onboarding = () => {
   const [customDomain, setCustomDomain] = useState('');
   const [dnsStatus, setDnsStatus] = useState<'pending' | 'verified' | 'incorrect' | 'no_records'>('pending');
   const [isVerifying, setIsVerifying] = useState(false);
+  const [isSimulating, setIsSimulating] = useState(false);
+  const [webhookStatus, setWebhookStatus] = useState<'pending' | 'success' | 'error'>('pending');
   const webhookUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/receive-email`;
 
   const copyToClipboard = (text: string) => {
@@ -70,6 +72,52 @@ const Onboarding = () => {
       });
     } finally {
       setIsVerifying(false);
+    }
+  };
+
+  const simulateWebhook = async () => {
+    if (!customDomain.trim() || !customDomain.includes('.')) {
+      toast({ title: 'Domínio inválido', variant: 'destructive' });
+      return;
+    }
+
+    setIsSimulating(true);
+    try {
+      const mockPayload = {
+        recipients: [`onboarding-test@${customDomain.toLowerCase().trim()}`],
+        headers: {
+          From: ["Onboarding RadarMail <teste@radarmail.com>"],
+          Subject: ["Teste de Onboarding Webhook"]
+        },
+        body: {
+          html: "<p>Validando roteamento de entrada...</p>",
+          plaintext: "Validando roteamento de entrada..."
+        },
+        message_id: `onb-${Date.now()}`,
+        domain: customDomain.toLowerCase().trim()
+      };
+
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY
+        },
+        body: JSON.stringify(mockPayload)
+      });
+
+      if (response.ok) {
+        setWebhookStatus('success');
+        toast({ title: 'Simulação concluída!', description: 'O roteamento do webhook está funcionando.' });
+      } else {
+        setWebhookStatus('error');
+        toast({ title: 'Erro no Webhook', description: 'Não foi possível processar a simulação.', variant: 'destructive' });
+      }
+    } catch (e: any) {
+      setWebhookStatus('error');
+      toast({ title: 'Falha na conexão', description: e.message, variant: 'destructive' });
+    } finally {
+      setIsSimulating(false);
     }
   };
 
@@ -326,11 +374,14 @@ const Onboarding = () => {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <h4 className="font-bold text-sm flex items-center gap-2">
-                      <Mail className="h-4 w-4 text-primary" />
-                      Passo 2: Roteamento Webhook
-                    </h4>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-bold text-sm flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-primary" />
+                        Passo 2: Roteamento Webhook
+                      </h4>
+                      {webhookStatus === 'success' && <CheckCircle2 className="h-4 w-4 text-success" />}
+                    </div>
                     <p className="text-xs text-muted-foreground">
                       No painel do Maileroo, encaminhe os emails para:
                     </p>
@@ -340,6 +391,22 @@ const Onboarding = () => {
                         <Copy className="w-3 h-3" />
                       </Button>
                     </div>
+                    
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full mt-2 gap-2 border-primary/20 text-primary hover:bg-primary/5" 
+                      onClick={simulateWebhook}
+                      disabled={isSimulating || dnsStatus !== 'verified'}
+                    >
+                      {isSimulating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3 fill-current" />}
+                      Testar Roteamento do Webhook
+                    </Button>
+                    {dnsStatus !== 'verified' && (
+                      <p className="text-[10px] text-muted-foreground italic text-center">
+                        Verifique o DNS primeiro para liberar o teste de webhook.
+                      </p>
+                    )}
                   </div>
                 </div>
               </CardContent>
