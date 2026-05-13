@@ -522,11 +522,11 @@ const Onboarding = () => {
               <Button 
                 onClick={handleNext}
                 size="lg"
-                disabled={!isStepValid() || loading}
-                className="px-8 ml-auto"
+                disabled={!isStepValid() || loading || (step === 2 && dnsStatus !== 'verified')}
+                className="px-8 ml-auto group"
               >
                 {loading ? 'Processando...' : step === 2 ? 'Concluir Configuração' : 'Próximo Passo'}
-                {!loading && <ArrowRight className="h-4 w-4 ml-2" />}
+                {!loading && <ArrowRight className="h-4 w-4 ml-2 transition-transform group-hover:translate-x-1" />}
               </Button>
             )}
             
