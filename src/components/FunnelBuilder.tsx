@@ -331,7 +331,24 @@ export const FunnelBuilder: React.FC<FunnelBuilderProps> = ({
   };
 
   if (isLoading) {
-// ... keep existing code
+    return (
+      <div className="grid grid-cols-2 gap-6 min-h-[500px]">
+        <div className="space-y-4">
+          <div className="flex items-center justify-between mb-4">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-8 w-24" />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            {[...Array(4)].map((_, i) => (
+              <Skeleton key={i} className="h-48 rounded-lg" />
+            ))}
+          </div>
+        </div>
+        <div className="space-y-4">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-[400px] w-full rounded-lg" />
+        </div>
+      </div>
     );
   }
 
