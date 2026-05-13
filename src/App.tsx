@@ -108,6 +108,7 @@ const App = () => (
               {/* Alertas e Configurações */}
               <Route path="alertas" element={<ClientAlerts />} />
               <Route path="configuracoes" element={<Settings />} />
+              <Route path="configuracoes/dominios/:id/verificar" element={<DomainVerification />} />
 
               {/* Legacy redirects */}
               <Route path="senders" element={<Navigate to="/app/acompanhamentos/remetentes" replace />} />
