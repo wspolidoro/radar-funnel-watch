@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -96,6 +97,9 @@ const categoryColors: Record<string, string> = {
 const Funnels = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
+  const aliasId = searchParams.get('alias');
+  
   const [selectedFunnel, setSelectedFunnel] = useState<EmailFunnel | null>(null);
   const [viewingEmail, setViewingEmail] = useState<Email | null>(null);
   const [senderFilter, setSenderFilter] = useState('all');
@@ -107,6 +111,12 @@ const Funnels = () => {
   const [newFunnelColor, setNewFunnelColor] = useState('#3b82f6');
   const [newFunnelEmailIds, setNewFunnelEmailIds] = useState<string[]>([]);
   const [isDetecting, setIsDetecting] = useState(false);
+
+  useEffect(() => {
+    if (aliasId) {
+      setIsCreateOpen(true);
+    }
+  }, [aliasId]);
 
   // Fetch funnels
   const { data: funnels, isLoading } = useQuery({
@@ -510,11 +520,12 @@ const Funnels = () => {
 
                   {/* Funnel Builder */}
                   <div className="border-t pt-4">
-                    <FunnelBuilder
-                      selectedEmailIds={newFunnelEmailIds}
-                      onEmailsChange={setNewFunnelEmailIds}
-                      funnelColor={newFunnelColor}
-                    />
+                  <FunnelBuilder
+                    selectedEmailIds={newFunnelEmailIds}
+                    onEmailsChange={setNewFunnelEmailIds}
+                    funnelColor={newFunnelColor}
+                    initialAliasId={aliasId}
+                  />
                   </div>
                 </div>
               </div>

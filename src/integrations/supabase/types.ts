@@ -55,6 +55,7 @@ export type Database = {
           competitor_id: string | null
           confirmation_link: string | null
           created_at: string
+          cta_analysis: Json | null
           ctas: Json | null
           email_type: string | null
           from_email: string
@@ -64,11 +65,14 @@ export type Database = {
           id: string
           is_processed: boolean | null
           links_count: number | null
+          main_topics: string[] | null
+          marketing_insights: Json | null
           optin_status: string | null
           received_at: string
           seed_id: string | null
           sentiment: string | null
           subject: string
+          target_audience: string | null
           text_content: string | null
           word_count: number | null
         }
@@ -79,6 +83,7 @@ export type Database = {
           competitor_id?: string | null
           confirmation_link?: string | null
           created_at?: string
+          cta_analysis?: Json | null
           ctas?: Json | null
           email_type?: string | null
           from_email: string
@@ -88,11 +93,14 @@ export type Database = {
           id?: string
           is_processed?: boolean | null
           links_count?: number | null
+          main_topics?: string[] | null
+          marketing_insights?: Json | null
           optin_status?: string | null
           received_at: string
           seed_id?: string | null
           sentiment?: string | null
           subject: string
+          target_audience?: string | null
           text_content?: string | null
           word_count?: number | null
         }
@@ -103,6 +111,7 @@ export type Database = {
           competitor_id?: string | null
           confirmation_link?: string | null
           created_at?: string
+          cta_analysis?: Json | null
           ctas?: Json | null
           email_type?: string | null
           from_email?: string
@@ -112,11 +121,14 @@ export type Database = {
           id?: string
           is_processed?: boolean | null
           links_count?: number | null
+          main_topics?: string[] | null
+          marketing_insights?: Json | null
           optin_status?: string | null
           received_at?: string
           seed_id?: string | null
           sentiment?: string | null
           subject?: string
+          target_audience?: string | null
           text_content?: string | null
           word_count?: number | null
         }

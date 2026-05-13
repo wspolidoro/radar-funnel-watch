@@ -24,7 +24,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { 
   Search, Filter, Inbox, GitBranch, ArrowRight, 
-  Clock, Mail, Trash2, X, Plus, Eye 
+  Clock, Mail, Trash2, X, Plus, Eye, Sparkles,
+  LayoutGrid, List
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -57,6 +58,7 @@ interface FunnelBuilderProps {
   selectedEmailIds: string[];
   onEmailsChange: (emailIds: string[]) => void;
   funnelColor?: string;
+  initialAliasId?: string | null;
 }
 
 // Droppable container for the timeline
@@ -98,13 +100,16 @@ export const FunnelBuilder: React.FC<FunnelBuilderProps> = ({
   selectedEmailIds,
   onEmailsChange,
   funnelColor = '#3b82f6',
+  initialAliasId = null,
 }) => {
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [senderFilter, setSenderFilter] = useState('all');
+  const [aliasFilter, setAliasFilter] = useState<string | 'all'>(initialAliasId || 'all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [activeId, setActiveId] = useState<string | null>(null);
   const [previewEmail, setPreviewEmail] = useState<FunnelEmailCardData | null>(null);
+  const [viewMode, setViewMode] = useState<'timeline' | 'grid'>('timeline');
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -123,7 +128,12 @@ export const FunnelBuilder: React.FC<FunnelBuilderProps> = ({
     queryFn: async () => {
       const { data, error } = await supabase
         .from('captured_newsletters')
-        .select('id, from_email, from_name, subject, html_content, received_at, category, ctas')
+        .select(`
+          id, from_email, from_name, subject, html_content, 
+          received_at, category, ctas, main_topics, 
+          marketing_insights, target_audience, email_type, sentiment,
+          alias_id
+        `)
         .order('received_at', { ascending: false });
 
       if (error) throw error;
@@ -154,6 +164,18 @@ export const FunnelBuilder: React.FC<FunnelBuilderProps> = ({
     return Array.from(categories);
   }, [allEmails]);
 
+  // Fetch aliases for filter
+  const { data: aliases } = useQuery({
+    queryKey: ['funnel-builder-aliases'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('email_aliases')
+        .select('id, alias, name');
+      if (error) throw error;
+      return data;
+    },
+  });
+
   // Filter available emails (not already selected)
   const availableEmails = useMemo(() => {
     if (!allEmails) return [];
@@ -181,6 +203,11 @@ export const FunnelBuilder: React.FC<FunnelBuilderProps> = ({
       
       // Apply category filter
       if (categoryFilter !== 'all' && email.category !== categoryFilter) {
+        return false;
+      }
+
+      // Apply alias filter
+      if (aliasFilter !== 'all' && (email as any).alias_id !== aliasFilter) {
         return false;
       }
       
@@ -292,18 +319,56 @@ export const FunnelBuilder: React.FC<FunnelBuilderProps> = ({
     }
   };
 
+  const suggestSequence = () => {
+    if (!availableEmails.length) return;
+    
+    // Group emails by sender
+    const senderGroups = new Map<string, FunnelEmailCardData[]>();
+    availableEmails.forEach(email => {
+      const group = senderGroups.get(email.from_email) || [];
+      group.push(email);
+      senderGroups.set(email.from_email, group);
+    });
+
+    // Find the sender with the most emails
+    let bestSender = '';
+    let maxEmails = 0;
+    senderGroups.forEach((emails, sender) => {
+      if (emails.length > maxEmails) {
+        maxEmails = emails.length;
+        bestSender = sender;
+      }
+    });
+
+    if (bestSender) {
+      const suggestedEmails = senderGroups.get(bestSender) || [];
+      // Sort by date ascending to create a logical sequence
+      const suggestedIds = suggestedEmails
+        .sort((a, b) => new Date(a.received_at).getTime() - new Date(b.received_at).getTime())
+        .map(e => e.id);
+      
+      onEmailsChange([...selectedEmailIds, ...suggestedIds]);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="grid grid-cols-2 gap-6 min-h-[500px]">
         <div className="space-y-4">
-          <Skeleton className="h-10 w-full" />
+          <div className="flex items-center justify-between mb-4">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-8 w-24" />
+          </div>
           <div className="grid grid-cols-2 gap-4">
             {[...Array(4)].map((_, i) => (
-              <Skeleton key={i} className="h-48" />
+              <Skeleton key={i} className="h-48 rounded-lg" />
             ))}
           </div>
         </div>
-        <Skeleton className="h-full" />
+        <div className="space-y-4">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-[400px] w-full rounded-lg" />
+        </div>
       </div>
     );
   }
@@ -338,9 +403,9 @@ export const FunnelBuilder: React.FC<FunnelBuilderProps> = ({
                 className="pl-9"
               />
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Select value={senderFilter} onValueChange={setSenderFilter}>
-                <SelectTrigger className="flex-1">
+                <SelectTrigger className="flex-1 min-w-[120px]">
                   <Filter className="h-4 w-4 mr-2" />
                   <SelectValue placeholder="Remetente" />
                 </SelectTrigger>
@@ -351,8 +416,21 @@ export const FunnelBuilder: React.FC<FunnelBuilderProps> = ({
                   ))}
                 </SelectContent>
               </Select>
+
+              <Select value={aliasFilter} onValueChange={setAliasFilter}>
+                <SelectTrigger className="flex-1 min-w-[120px]">
+                  <SelectValue placeholder="Acompanhamento" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos acompanhamentos</SelectItem>
+                  {aliases?.map(a => (
+                    <SelectItem key={a.id} value={a.id}>{a.name || a.alias}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="flex-1">
+                <SelectTrigger className="flex-1 min-w-[120px]">
                   <SelectValue placeholder="Categoria" />
                 </SelectTrigger>
                 <SelectContent>
@@ -427,12 +505,24 @@ export const FunnelBuilder: React.FC<FunnelBuilderProps> = ({
               Timeline do Funil
               <Badge variant="secondary">{selectedEmailIds.length}</Badge>
             </h3>
-            {selectedEmailIds.length > 0 && (
-              <Button variant="ghost" size="sm" onClick={clearTimeline}>
-                <Trash2 className="h-4 w-4 mr-1" />
-                Limpar
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={suggestSequence}
+                className="gap-1.5 text-primary border-primary/20 hover:bg-primary/5"
+                title="Sugerir sequência baseada no remetente com mais emails"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                Sugerir Funil
               </Button>
-            )}
+              {selectedEmailIds.length > 0 && (
+                <Button variant="ghost" size="sm" onClick={clearTimeline}>
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Limpar
+                </Button>
+              )}
+            </div>
           </div>
 
           {/* Timeline Stats */}
@@ -475,39 +565,57 @@ export const FunnelBuilder: React.FC<FunnelBuilderProps> = ({
                         )}
                         
                         <div className="relative group">
-                          <FunnelEmailCard
-                            email={email}
-                            isDraggable={true}
-                            isInTimeline={true}
-                            index={index}
-                            funnelColor={funnelColor}
-                            firstEmailDate={timelineStats?.firstDate}
-                            onClick={() => setPreviewEmail(email)}
-                          />
-                          <div className="absolute top-2 right-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Button
-                              variant="secondary"
-                              size="icon"
-                              className="h-7 w-7"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setPreviewEmail(email);
-                              }}
-                            >
-                              <Eye className="h-3.5 w-3.5" />
-                            </Button>
+                          <div className="relative z-10 flex gap-4 items-start">
+                            {/* Sequence line/indicator */}
+                            <div className="flex flex-col items-center pt-2">
+                              <div 
+                                className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-md shrink-0"
+                                style={{ backgroundColor: funnelColor }}
+                              >
+                                {index + 1}
+                              </div>
+                              {index < selectedEmails.length - 1 && (
+                                <div className="w-0.5 h-full min-h-[40px] bg-primary/20 mt-2" />
+                              )}
+                            </div>
+
+                            <div className="flex-1 group/item relative">
+                              <FunnelEmailCard
+                                email={email}
+                                isDraggable={true}
+                                isInTimeline={true}
+                                index={index}
+                                funnelColor={funnelColor}
+                                firstEmailDate={timelineStats?.firstDate}
+                                onClick={() => setPreviewEmail(email)}
+                              />
+                              
+                              <div className="absolute top-2 right-10 flex gap-1 opacity-0 group-hover/item:opacity-100 transition-opacity">
+                                <Button
+                                  variant="secondary"
+                                  size="icon"
+                                  className="h-7 w-7"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setPreviewEmail(email);
+                                  }}
+                                >
+                                  <Eye className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+                              <Button
+                                variant="destructive"
+                                size="icon"
+                                className="absolute top-2 right-2 h-7 w-7 opacity-0 group-hover/item:opacity-100 transition-opacity"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  removeFromTimeline(email.id);
+                                }}
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
                           </div>
-                          <Button
-                            variant="destructive"
-                            size="icon"
-                            className="absolute top-2 right-2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              removeFromTimeline(email.id);
-                            }}
-                          >
-                            <X className="h-3.5 w-3.5" />
-                          </Button>
                         </div>
                       </div>
                     );
@@ -541,6 +649,66 @@ export const FunnelBuilder: React.FC<FunnelBuilderProps> = ({
               </SheetHeader>
 
               <div className="mt-6 space-y-4">
+                {/* AI Analysis Summary */}
+                {(previewEmail.email_type || previewEmail.sentiment || previewEmail.target_audience) && (
+                  <Card className="border-primary/20 bg-primary/5">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-medium flex items-center gap-2">
+                        <Sparkles className="h-4 w-4 text-primary" />
+                        Análise Estratégica IA
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="flex gap-4">
+                        {previewEmail.email_type && (
+                          <div className="flex-1">
+                            <span className="text-xs text-muted-foreground block mb-1">Tipo de Email</span>
+                            <Badge variant="outline" className="capitalize">{previewEmail.email_type}</Badge>
+                          </div>
+                        )}
+                        {previewEmail.sentiment && (
+                          <div className="flex-1">
+                            <span className="text-xs text-muted-foreground block mb-1">Sentimento</span>
+                            <Badge variant="outline" className="capitalize">{previewEmail.sentiment}</Badge>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {previewEmail.target_audience && (
+                        <div>
+                          <span className="text-xs text-muted-foreground block mb-1">Público-Alvo</span>
+                          <p className="text-sm">{previewEmail.target_audience}</p>
+                        </div>
+                      )}
+
+                      {previewEmail.main_topics && previewEmail.main_topics.length > 0 && (
+                        <div>
+                          <span className="text-xs text-muted-foreground block mb-1">Tópicos Principais</span>
+                          <div className="flex flex-wrap gap-1">
+                            {previewEmail.main_topics.map((topic, i) => (
+                              <Badge key={i} variant="secondary" className="text-[10px]">{topic}</Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {previewEmail.marketing_insights && (
+                        <div>
+                          <span className="text-xs text-muted-foreground block mb-1">Insights de Marketing</span>
+                          <ul className="text-sm space-y-1 list-disc list-inside">
+                            {Array.isArray(previewEmail.marketing_insights) ? 
+                              previewEmail.marketing_insights.map((insight, i) => (
+                                <li key={i}>{insight}</li>
+                              )) : 
+                              <li>{String(previewEmail.marketing_insights)}</li>
+                            }
+                          </ul>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
                 {/* Metadata */}
                 <Card>
                   <CardHeader className="pb-3">

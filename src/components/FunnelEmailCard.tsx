@@ -17,6 +17,11 @@ export interface FunnelEmailCardData {
   received_at: string;
   category: string | null;
   ctas: any;
+  main_topics?: string[];
+  marketing_insights?: any;
+  target_audience?: string;
+  email_type?: string;
+  sentiment?: string;
 }
 
 interface FunnelEmailCardProps {

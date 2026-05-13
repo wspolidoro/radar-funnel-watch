@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, Mail, Users, Calendar, ExternalLink } from 'lucide-react';
+import { Plus, Mail, Users, Calendar, ExternalLink, GitBranch } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -167,10 +167,24 @@ export default function Acompanhamentos() {
                   <Badge variant={acompanhamento.is_confirmed ? 'default' : 'secondary'}>
                     {acompanhamento.is_confirmed ? 'Ativo' : 'Pendente'}
                   </Badge>
-                  <Button variant="ghost" size="sm" className="gap-1">
-                    Ver detalhes
-                    <ExternalLink className="h-3 w-3" />
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="gap-1 text-primary hover:text-primary hover:bg-primary/5"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/app/funis?alias=${acompanhamento.id}`);
+                      }}
+                    >
+                      <GitBranch className="h-3 w-3" />
+                      Fluxograma
+                    </Button>
+                    <Button variant="ghost" size="sm" className="gap-1">
+                      Ver detalhes
+                      <ExternalLink className="h-3 w-3" />
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
