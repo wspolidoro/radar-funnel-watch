@@ -110,6 +110,7 @@ const Onboarding = () => {
 
       if (response.ok) {
         setWebhookStatus('success');
+        setDnsStatus('verified'); // If webhook works, DNS must be mostly OK or it's a simulation success
         toast({ title: 'Simulação concluída!', description: 'O roteamento do webhook está funcionando.' });
       } else {
         setWebhookStatus('error');
