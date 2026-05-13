@@ -83,7 +83,7 @@ const Onboarding = () => {
         .single();
 
       if (error) throw error;
-      return data;
+      return { alias: data.alias, domainId: domainData.id };
     },
     onSuccess: (data) => {
       toast({ 
@@ -92,7 +92,7 @@ const Onboarding = () => {
       });
       queryClient.invalidateQueries({ queryKey: ['email-domains'] });
       queryClient.invalidateQueries({ queryKey: ['email-aliases'] });
-      navigate(`/app/configuracoes/dominios/${data.domain_id || data.id}/verificar`);
+      navigate(`/app/configuracoes/dominios/${data.domainId}/verificar`);
     },
     onError: (error: any) => {
       toast({ 
