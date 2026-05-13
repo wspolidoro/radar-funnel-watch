@@ -30,6 +30,7 @@ interface EmailDomain {
 export function DomainManager() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [domain, setDomain] = useState('');
   const [provider, setProvider] = useState('maileroo');
