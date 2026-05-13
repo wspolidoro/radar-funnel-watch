@@ -374,11 +374,14 @@ const Onboarding = () => {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <h4 className="font-bold text-sm flex items-center gap-2">
-                      <Mail className="h-4 w-4 text-primary" />
-                      Passo 2: Roteamento Webhook
-                    </h4>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-bold text-sm flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-primary" />
+                        Passo 2: Roteamento Webhook
+                      </h4>
+                      {webhookStatus === 'success' && <CheckCircle2 className="h-4 w-4 text-success" />}
+                    </div>
                     <p className="text-xs text-muted-foreground">
                       No painel do Maileroo, encaminhe os emails para:
                     </p>
@@ -388,6 +391,22 @@ const Onboarding = () => {
                         <Copy className="w-3 h-3" />
                       </Button>
                     </div>
+                    
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full mt-2 gap-2 border-primary/20 text-primary hover:bg-primary/5" 
+                      onClick={simulateWebhook}
+                      disabled={isSimulating || dnsStatus !== 'verified'}
+                    >
+                      {isSimulating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3 fill-current" />}
+                      Testar Roteamento do Webhook
+                    </Button>
+                    {dnsStatus !== 'verified' && (
+                      <p className="text-[10px] text-muted-foreground italic text-center">
+                        Verifique o DNS primeiro para liberar o teste de webhook.
+                      </p>
+                    )}
                   </div>
                 </div>
               </CardContent>
