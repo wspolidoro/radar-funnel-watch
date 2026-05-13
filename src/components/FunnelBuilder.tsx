@@ -193,6 +193,11 @@ export const FunnelBuilder: React.FC<FunnelBuilderProps> = ({
       if (categoryFilter !== 'all' && email.category !== categoryFilter) {
         return false;
       }
+
+      // Apply alias filter
+      if (aliasFilter !== 'all' && (email as any).alias_id !== aliasFilter) {
+        return false;
+      }
       
       return true;
     });
