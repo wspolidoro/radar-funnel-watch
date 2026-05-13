@@ -347,7 +347,6 @@ const Onboarding = () => {
           )}
 
           {step === 2 && (
-            <>
               <CardHeader>
                 <CardTitle className="flex items-center justify-between text-2xl">
                   <div className="flex items-center gap-2">
