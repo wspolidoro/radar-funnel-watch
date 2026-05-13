@@ -29,8 +29,10 @@ const Onboarding = () => {
   // Step 1: Tracking Name
   const [trackingName, setTrackingName] = useState('');
   
-  // Step 2: Domain Selection
-  const [selectedDomain, setSelectedDomain] = useState('');
+  // Step 2: Custom Domain Configuration
+  const [customDomain, setCustomDomain] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
+  const webhookUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/receive-email`;
 
   // Fetch available domains
   const { data: domains } = useQuery({
