@@ -40,6 +40,11 @@ interface CapturedNewsletter {
   optin_status: string | null;
   confirmation_link: string | null;
   email_type: string | null;
+  sentiment: string | null;
+  main_topics: string[] | null;
+  marketing_insights: any | null;
+  target_audience: string | null;
+  cta_analysis: any | null;
   links_count: number | null;
   word_count: number | null;
   ctas: CTA[] | unknown[] | null;
