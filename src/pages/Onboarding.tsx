@@ -440,18 +440,18 @@ const Onboarding = () => {
                         >
                           <Copy className="h-3 w-3" />
                         </Button>
-                      </div>
-
-                      <Button 
-                        variant="secondary" 
-                        size="sm" 
-                        className="w-full text-[10px] h-8 gap-2 bg-primary/10 text-primary hover:bg-primary/20 border-none"
-                        onClick={() => copyToClipboard('Tipo: MX\nPrioridade: 10\nServidor: mx.maileroo.com')}
-                      >
-                        <Copy className="h-3 w-3" />
-                        Copiar Bloco Completo
-                      </Button>
                     </div>
+                    
+                    <Button 
+                      variant="secondary" 
+                      size="sm" 
+                      className="w-full text-[10px] h-8 gap-2 bg-primary/10 text-primary hover:bg-primary/20 border-none"
+                      onClick={() => copyToClipboard('Tipo: MX\nPrioridade: 10\nServidor: mx.maileroo.com')}
+                    >
+                      <Copy className="h-3 w-3" />
+                      Copiar Bloco Completo
+                    </Button>
+                  </div>
 
                     {foundMx.length > 0 && (
                       <div className="mt-4 space-y-2">
