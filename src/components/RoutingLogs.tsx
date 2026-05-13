@@ -73,10 +73,20 @@ export const RoutingLogs = ({ domain }: RoutingLogsProps) => {
 
   return (
     <Card className="border-none shadow-none bg-transparent">
-      <CardHeader className="px-0 pt-0">
+      <CardHeader className="px-0 pt-0 flex flex-row items-center justify-between">
         <CardTitle className="text-lg font-bold flex items-center gap-2">
           Últimas Requisições (Webhook Maileroo)
         </CardTitle>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="gap-2" 
+          onClick={simulateWebhook}
+          disabled={isSimulationPending}
+        >
+          {isSimulationPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-3 w-3 fill-current" />}
+          Simular Webhook
+        </Button>
       </CardHeader>
       <CardContent className="px-0">
         <div className="rounded-md border">
