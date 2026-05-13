@@ -100,10 +100,12 @@ export const FunnelBuilder: React.FC<FunnelBuilderProps> = ({
   selectedEmailIds,
   onEmailsChange,
   funnelColor = '#3b82f6',
+  initialAliasId = null,
 }) => {
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [senderFilter, setSenderFilter] = useState('all');
+  const [aliasFilter, setAliasFilter] = useState<string | 'all'>(initialAliasId || 'all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [activeId, setActiveId] = useState<string | null>(null);
   const [previewEmail, setPreviewEmail] = useState<FunnelEmailCardData | null>(null);
