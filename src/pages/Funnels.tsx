@@ -112,6 +112,12 @@ const Funnels = () => {
   const [newFunnelEmailIds, setNewFunnelEmailIds] = useState<string[]>([]);
   const [isDetecting, setIsDetecting] = useState(false);
 
+  useEffect(() => {
+    if (aliasId) {
+      setIsCreateOpen(true);
+    }
+  }, [aliasId]);
+
   // Fetch funnels
   const { data: funnels, isLoading } = useQuery({
     queryKey: ['email-funnels'],
