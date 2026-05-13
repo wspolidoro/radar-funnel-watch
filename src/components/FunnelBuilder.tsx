@@ -531,39 +531,57 @@ export const FunnelBuilder: React.FC<FunnelBuilderProps> = ({
                         )}
                         
                         <div className="relative group">
-                          <FunnelEmailCard
-                            email={email}
-                            isDraggable={true}
-                            isInTimeline={true}
-                            index={index}
-                            funnelColor={funnelColor}
-                            firstEmailDate={timelineStats?.firstDate}
-                            onClick={() => setPreviewEmail(email)}
-                          />
-                          <div className="absolute top-2 right-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Button
-                              variant="secondary"
-                              size="icon"
-                              className="h-7 w-7"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setPreviewEmail(email);
-                              }}
-                            >
-                              <Eye className="h-3.5 w-3.5" />
-                            </Button>
+                          <div className="relative z-10 flex gap-4 items-start">
+                            {/* Sequence line/indicator */}
+                            <div className="flex flex-col items-center pt-2">
+                              <div 
+                                className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-md shrink-0"
+                                style={{ backgroundColor: funnelColor }}
+                              >
+                                {index + 1}
+                              </div>
+                              {index < selectedEmails.length - 1 && (
+                                <div className="w-0.5 h-full min-h-[40px] bg-primary/20 mt-2" />
+                              )}
+                            </div>
+
+                            <div className="flex-1 group/item relative">
+                              <FunnelEmailCard
+                                email={email}
+                                isDraggable={true}
+                                isInTimeline={true}
+                                index={index}
+                                funnelColor={funnelColor}
+                                firstEmailDate={timelineStats?.firstDate}
+                                onClick={() => setPreviewEmail(email)}
+                              />
+                              
+                              <div className="absolute top-2 right-10 flex gap-1 opacity-0 group-hover/item:opacity-100 transition-opacity">
+                                <Button
+                                  variant="secondary"
+                                  size="icon"
+                                  className="h-7 w-7"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setPreviewEmail(email);
+                                  }}
+                                >
+                                  <Eye className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+                              <Button
+                                variant="destructive"
+                                size="icon"
+                                className="absolute top-2 right-2 h-7 w-7 opacity-0 group-hover/item:opacity-100 transition-opacity"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  removeFromTimeline(email.id);
+                                }}
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
                           </div>
-                          <Button
-                            variant="destructive"
-                            size="icon"
-                            className="absolute top-2 right-2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              removeFromTimeline(email.id);
-                            }}
-                          >
-                            <X className="h-3.5 w-3.5" />
-                          </Button>
                         </div>
                       </div>
                     );
