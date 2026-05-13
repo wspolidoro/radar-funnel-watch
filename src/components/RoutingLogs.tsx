@@ -10,16 +10,21 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, AlertCircle, CheckCircle2, Clock } from 'lucide-react';
+import { Loader2, AlertCircle, CheckCircle2, Clock, Play } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useState } from 'react';
 
 interface RoutingLogsProps {
   domain: string;
 }
 
 export const RoutingLogs = ({ domain }: RoutingLogsProps) => {
-  const { data: logs, isLoading } = useQuery({
+  const [isSimulationPending, setIsSimulationPending] = useState(false);
+
+  const { data: logs, isLoading, refetch } = useQuery({
     queryKey: ['email-routing-logs', domain],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -33,6 +38,46 @@ export const RoutingLogs = ({ domain }: RoutingLogsProps) => {
       return data;
     },
   });
+
+  const simulateWebhook = async () => {
+    setIsSimulationPending(true);
+    const mockPayload = {
+      recipients: [`test-webhook@${domain}`],
+      headers: {
+        From: ["Simulação RadarMail <simulacao@radarmail.com>"],
+        Subject: ["Teste de Roteamento de Webhook"]
+      },
+      body: {
+        html: "<p>Este é um teste manual de webhook para validar o roteamento.</p>",
+        plaintext: "Este é um teste manual de webhook para validar o roteamento."
+      },
+      message_id: `sim-${Date.now()}`,
+      domain: domain
+    };
+
+    try {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/receive-email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY
+        },
+        body: JSON.stringify(mockPayload)
+      });
+
+      if (response.ok) {
+        toast.success("Simulação enviada!", { description: "O log deve aparecer na lista em instantes." });
+        setTimeout(() => refetch(), 1500);
+      } else {
+        const err = await response.text();
+        toast.error("Erro na simulação", { description: err });
+      }
+    } catch (e: any) {
+      toast.error("Falha na requisição", { description: e.message });
+    } finally {
+      setIsSimulationPending(false);
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -71,10 +116,20 @@ export const RoutingLogs = ({ domain }: RoutingLogsProps) => {
 
   return (
     <Card className="border-none shadow-none bg-transparent">
-      <CardHeader className="px-0 pt-0">
+      <CardHeader className="px-0 pt-0 flex flex-row items-center justify-between">
         <CardTitle className="text-lg font-bold flex items-center gap-2">
           Últimas Requisições (Webhook Maileroo)
         </CardTitle>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="gap-2" 
+          onClick={simulateWebhook}
+          disabled={isSimulationPending}
+        >
+          {isSimulationPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-3 w-3 fill-current" />}
+          Simular Webhook
+        </Button>
       </CardHeader>
       <CardContent className="px-0">
         <div className="rounded-md border">
