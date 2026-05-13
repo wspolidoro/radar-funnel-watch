@@ -449,33 +449,91 @@ const Onboarding = () => {
             </>
           )}
 
+          {step === 3 && (
+            <>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-2xl">
+                  <Terminal className="h-6 w-6 text-primary" />
+                  Finalizando Setup
+                </CardTitle>
+                <CardDescription>
+                  Estamos configurando sua infraestrutura de inteligência
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border border-border">
+                    <div className="flex items-center gap-3">
+                      {setupStep === 'domain' ? <RefreshCw className="h-5 w-5 animate-spin text-primary" /> : <Server className="h-5 w-5 text-muted-foreground" />}
+                      <span className={setupStep === 'domain' ? 'font-bold' : ''}>Provisionamento de Domínio</span>
+                    </div>
+                    {setupStep !== 'domain' && <CheckCircle2 className="h-5 w-5 text-success" />}
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border border-border">
+                    <div className="flex items-center gap-3">
+                      {setupStep === 'alias' ? <RefreshCw className="h-5 w-5 animate-spin text-primary" /> : <Zap className="h-5 w-5 text-muted-foreground" />}
+                      <span className={setupStep === 'alias' ? 'font-bold' : ''}>Configuração do Rastreador</span>
+                    </div>
+                    {(setupStep === 'connectivity' || setupStep === 'complete') && <CheckCircle2 className="h-5 w-5 text-success" />}
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border border-border">
+                    <div className="flex items-center gap-3">
+                      {setupStep === 'connectivity' ? <RefreshCw className="h-5 w-5 animate-spin text-primary" /> : <Globe className="h-5 w-5 text-muted-foreground" />}
+                      <span className={setupStep === 'connectivity' ? 'font-bold' : ''}>Validação de Conectividade</span>
+                    </div>
+                    {setupStep === 'complete' && <CheckCircle2 className="h-5 w-5 text-success" />}
+                  </div>
+                </div>
+
+                <div className="bg-black/90 p-4 rounded-lg font-mono text-[10px] sm:text-xs text-green-400 min-h-[120px] max-h-[200px] overflow-y-auto">
+                  <div className="flex items-center gap-2 mb-2 text-muted-foreground border-b border-white/10 pb-1">
+                    <Terminal className="h-3 w-3" /> system_logs
+                  </div>
+                  {setupLogs.map((log, i) => (
+                    <div key={i} className="mb-1 flex gap-2">
+                      <span className="text-white/30">[{new Date().toLocaleTimeString()}]</span>
+                      <span className={log.status === 'error' ? 'text-red-400' : log.status === 'success' ? 'text-green-400' : 'text-blue-300'}>
+                        {log.status === 'error' ? '✖' : log.status === 'success' ? '✔' : '➜'} {log.msg}
+                      </span>
+                    </div>
+                  ))}
+                  {setupStep !== 'complete' && <div className="animate-pulse">_</div>}
+                </div>
+              </CardContent>
+            </>
+          )}
+
           <div className="flex items-center justify-between p-6 border-t bg-muted/20">
-            {step > 1 ? (
-              <Button 
-                variant="ghost" 
-                onClick={() => setStep(step - 1)}
-                disabled={loading || createTrackingMutation.isPending}
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Voltar
-              </Button>
-            ) : (
-              <Button 
-                variant="ghost" 
-                onClick={() => navigate('/')}
-              >
+            {step === 1 && (
+              <Button variant="ghost" onClick={() => navigate('/')}>
                 Pular Onboarding
               </Button>
             )}
-            <Button 
-              onClick={handleNext}
-              size="lg"
-              disabled={!isStepValid() || loading || createTrackingMutation.isPending}
-              className="px-8"
-            >
-              {loading || createTrackingMutation.isPending ? 'Finalizando...' : step === 2 ? 'Concluir Configuração' : 'Próximo Passo'}
-              {!loading && !createTrackingMutation.isPending && <ArrowRight className="h-4 w-4 ml-2" />}
-            </Button>
+            {step === 2 && (
+              <Button variant="ghost" onClick={() => setStep(1)}>
+                <ArrowLeft className="h-4 w-4 mr-2" /> Voltar
+              </Button>
+            )}
+            
+            {step < 3 && (
+              <Button 
+                onClick={handleNext}
+                size="lg"
+                disabled={!isStepValid() || loading}
+                className="px-8 ml-auto"
+              >
+                {loading ? 'Processando...' : step === 2 ? 'Concluir Configuração' : 'Próximo Passo'}
+                {!loading && <ArrowRight className="h-4 w-4 ml-2" />}
+              </Button>
+            )}
+            
+            {step === 3 && setupStep === 'complete' && (
+              <p className="text-sm text-muted-foreground italic w-full text-center">
+                Redirecionando para o painel de controle...
+              </p>
+            )}
           </div>
         </Card>
       </div>
