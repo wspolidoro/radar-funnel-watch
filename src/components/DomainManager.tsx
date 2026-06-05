@@ -21,7 +21,7 @@ interface EmailDomain {
   provider: string;
   is_verified: boolean;
   is_active: boolean;
-  webhook_secret: string | null;
+  
   created_at: string;
   dns_status: string | null;
   dns_verified_at: string | null;
