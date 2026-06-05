@@ -71,7 +71,8 @@ const Settings = () => {
 
   useEffect(() => {
     if (profile) {
-      setApiKey(profile.gpt_api_key || '');
+      // gpt_api_key is write-only for security and is never returned to the client.
+      setApiKey('');
       setUseOwnGpt(profile.use_own_gpt || false);
     }
   }, [profile]);
