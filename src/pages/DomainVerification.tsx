@@ -39,7 +39,7 @@ export default function DomainVerification() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('email_domains')
-        .select('*')
+        .select('id, user_id, domain, provider, is_verified, is_active, is_platform_domain, dns_status, dns_verified_at, mx_records, created_at, updated_at')
         .eq('id', id)
         .single();
       if (error) throw error;

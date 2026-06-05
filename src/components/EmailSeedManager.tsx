@@ -69,7 +69,7 @@ export function EmailSeedManager() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('email_seeds')
-        .select('*')
+        .select('id, user_id, name, email, provider, imap_host, imap_port, use_ssl, is_active, last_sync_at, created_at, updated_at')
         .order('created_at', { ascending: false });
       
       if (error) throw error;
@@ -89,7 +89,7 @@ export function EmailSeedManager() {
           user_id: user.id,
           imap_host: seed.provider === 'imap_custom' ? seed.imap_host : providerDefaults[seed.provider].host,
         })
-        .select()
+        .select('id, user_id, name, email, provider, imap_host, imap_port, use_ssl, is_active, last_sync_at, created_at, updated_at')
         .single();
       
       if (error) throw error;

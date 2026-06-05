@@ -43,7 +43,7 @@ const Settings = () => {
       if (!user?.id) return null;
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, user_id, full_name, avatar_url, created_at, updated_at, ai_credits, use_own_gpt')
         .eq('user_id', user.id)
         .single();
       if (error) throw error;
@@ -71,18 +71,25 @@ const Settings = () => {
 
   useEffect(() => {
     if (profile) {
-      setApiKey(profile.gpt_api_key || '');
+      // gpt_api_key is write-only for security and is never returned to the client.
+      setApiKey('');
       setUseOwnGpt(profile.use_own_gpt || false);
     }
   }, [profile]);
 
   // Update AI settings mutation
   const updateAiSettings = useMutation({
-    mutationFn: async ({ gpt_api_key, use_own_gpt }: { gpt_api_key: string; use_own_gpt: boolean }) => {
+    mutationFn: async ({ gpt_api_key, use_own_gpt }: { gpt_api_key?: string; use_own_gpt: boolean }) => {
       if (!user?.id) throw new Error('User not found');
+      // Only write the API key when the user actually typed a new one,
+      // since it is never read back to the client for security reasons.
+      const payload: { use_own_gpt: boolean; gpt_api_key?: string } = { use_own_gpt };
+      if (gpt_api_key && gpt_api_key.trim().length > 0) {
+        payload.gpt_api_key = gpt_api_key.trim();
+      }
       const { error } = await supabase
         .from('profiles')
-        .update({ gpt_api_key, use_own_gpt })
+        .update(payload)
         .eq('user_id', user.id);
       if (error) throw error;
     },
@@ -214,7 +221,7 @@ const Settings = () => {
                           type={showApiKey ? 'text' : 'password'}
                           value={apiKey}
                           onChange={(e) => setApiKey(e.target.value)}
-                          placeholder="sk-..."
+                          placeholder="••••••••  (deixe em branco para manter a chave atual)"
                           className="pr-10"
                         />
                         <Button

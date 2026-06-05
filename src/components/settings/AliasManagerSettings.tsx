@@ -62,7 +62,7 @@ export function AliasManagerSettings() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('email_domains')
-        .select('*')
+        .select('id, user_id, domain, provider, is_verified, is_active, is_platform_domain, dns_status, dns_verified_at, mx_records, created_at, updated_at')
         .eq('is_active', true)
         .order('created_at', { ascending: false });
 

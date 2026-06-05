@@ -21,7 +21,7 @@ interface EmailDomain {
   provider: string;
   is_verified: boolean;
   is_active: boolean;
-  webhook_secret: string | null;
+  
   created_at: string;
   dns_status: string | null;
   dns_verified_at: string | null;
@@ -45,7 +45,7 @@ export function DomainManager() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('email_domains')
-        .select('*')
+        .select('id, user_id, domain, provider, is_verified, is_active, is_platform_domain, dns_status, dns_verified_at, mx_records, created_at, updated_at')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
