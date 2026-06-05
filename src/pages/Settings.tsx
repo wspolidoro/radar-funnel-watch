@@ -221,7 +221,7 @@ const Settings = () => {
                           type={showApiKey ? 'text' : 'password'}
                           value={apiKey}
                           onChange={(e) => setApiKey(e.target.value)}
-                          placeholder="sk-..."
+                          placeholder="••••••••  (deixe em branco para manter a chave atual)"
                           className="pr-10"
                         />
                         <Button
