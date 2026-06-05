@@ -79,11 +79,17 @@ const Settings = () => {
 
   // Update AI settings mutation
   const updateAiSettings = useMutation({
-    mutationFn: async ({ gpt_api_key, use_own_gpt }: { gpt_api_key: string; use_own_gpt: boolean }) => {
+    mutationFn: async ({ gpt_api_key, use_own_gpt }: { gpt_api_key?: string; use_own_gpt: boolean }) => {
       if (!user?.id) throw new Error('User not found');
+      // Only write the API key when the user actually typed a new one,
+      // since it is never read back to the client for security reasons.
+      const payload: { use_own_gpt: boolean; gpt_api_key?: string } = { use_own_gpt };
+      if (gpt_api_key && gpt_api_key.trim().length > 0) {
+        payload.gpt_api_key = gpt_api_key.trim();
+      }
       const { error } = await supabase
         .from('profiles')
-        .update({ gpt_api_key, use_own_gpt })
+        .update(payload)
         .eq('user_id', user.id);
       if (error) throw error;
     },
